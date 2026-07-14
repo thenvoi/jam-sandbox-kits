@@ -1,0 +1,103 @@
+schemaVersion: "2"
+kind: mixin
+name: band-mixin
+displayName: Band self-onboarding (mixin)
+description: "Bolt Band onto an existing agent sandbox: injects the add-band self-onboarding skill, network access to Band + the harness's plugin repo, and Band API-key credential injection. The agent installs its own Band integration (which opens the persistent WebSocket) and onboards itself — no entrypoint owned."
+
+# A mixin extends a sandbox the customer already created for their reasoning
+# agent / coding harness (Claude Code, Codex, Hermes, NanoClaw, OpenClaw, …).
+# It does NOT define an image or entrypoint (that's the customer's agent). It
+# only injects the four things needed to self-onboard onto Band.
+
+# 1. Bootstrap credential injection — the owner/register key never enters the
+#    VM. The proxy replaces the sentinel x-api-key on requests to app.band.ai.
+#    Self-registration returns an agent-scoped key into the VM, so this mixin is
+#    intentionally T1 custody (bootstrap key out-of-VM, durable agent key in-VM),
+#    NOT T2. T2 requires a pre-registered agent whose key is proxy-injected too.
+credentials:
+  # Canonical v2 shape (matches sbx-kits-contrib spec/types.go + the
+  # sample-agent-v2 testdata): `service` + `apiKey.{name, proxyManaged,
+  # inject[{domain, header, format}]}`. The earlier draft used `host:`/`name:`,
+  # which the parser silently dropped — `sbx kit inspect --json` showed
+  # `"domain": ""`, i.e. an inject rule that never fires.
+  - service: band
+    description: "Band platform bootstrap key (owner/register scope)"
+    required: true
+    apiKey:
+      name: BAND_API_KEY
+      # The engine sets BAND_API_KEY to the literal "proxy-managed" sentinel
+      # in-VM and the egress proxy swaps it on the inject domain — the real
+      # key never enters the VM. This replaces the manual sentinel env var
+      # the earlier draft carried.
+      proxyManaged: true
+      inject:
+        - domain: "app.band.ai"
+          header: "x-api-key"
+          format: "%s"
+
+# 2. Network — deny-by-default egress opened to Band, the harness plugin repos
+#    the agent installs from, and the LLM providers it reasons with.
+caps:
+  network:
+    allow:
+      - "app.band.ai:443"
+      # plugin / integration source (the agent installs its own Band plugin)
+      - "github.com:443"
+      - "codeload.github.com:443"
+      - "raw.githubusercontent.com:443"
+      - "objects.githubusercontent.com:443"
+      - "pypi.org:443"
+      - "files.pythonhosted.org:443"
+      - "registry.npmjs.org:443"
+      # LLM providers (reasoning harnesses)
+      - "api.anthropic.com:443"
+      - "api.openai.com:443"
+
+# 3. Deterministic bootstrap helper. Fetch once during kit installation from a
+#    reviewed commit, verify the exact bytes, then install it as a normal
+#    executable. Runtime onboarding never executes a curl pipeline and a failed
+#    or truncated download cannot be mistaken for a successful registration.
+commands:
+  install:
+    - command: >-
+        set -eu;
+        tmp="$(mktemp)";
+        trap 'rm -f "$tmp"' EXIT;
+        curl -fsSL -o "$tmp" https://raw.githubusercontent.com/band-ai/add-band/bf68ea9a4977e83d1c0f66cf1baaab05d055910d/scripts/register-agent.sh;
+        printf '%s  %s\n' b679950af38224bd21fa54e5a3f88496fcdf80e0c034082853619bba0c3db9dd "$tmp" | sha256sum -c -;
+        install -m 0755 "$tmp" /usr/local/bin/band-register-agent
+      user: "0"
+      description: Install the reviewed Band registration helper
+
+# 4. Self-onboarding context. Registration is deterministic and supplied by the
+#    kit. Harness integration is deliberately a separate, versioned concern:
+#    this base mixin does not ask the model to discover or install arbitrary
+#    packages at runtime. Compose it with a reviewed harness-specific kit or
+#    preinstall the integration in the base sandbox.
+agentContext: |
+  ## Connect yourself to Band (add-band skill)
+
+  You can join the Band agent platform yourself. This kit installed a reviewed,
+  checksum-verified registration helper during sandbox creation:
+
+    - Mint your agent-scoped key from the injected Band bootstrap key:
+      `eval "$(BAND_BASE_URL="${BAND_REST_URL:-https://app.band.ai}" band-register-agent)"`
+      → sets BAND_AGENT_ID + BAND_AGENT_API_KEY in the current shell. The latter
+      is the newly minted durable *agent* key and therefore enters this VM (T1
+      custody); the injected owner/register key never does. The helper is pinned
+      to the reviewed add-band commit; update that pin deliberately.
+    - Use the Band integration already supplied by the base sandbox or by a
+      separately-reviewed harness-specific mixin. If none is installed, stop
+      and ask the host to add one; do not select or install arbitrary packages.
+    - Join the room your owner @mentions you in and reply — a reply means you
+      are live.
+
+  The owner/register Band key is injected by the sandbox proxy and is never
+  present in this VM. The returned agent-scoped key is present so the installed
+  integration can authenticate. Do not print either credential.
+
+  ## Network policy
+
+  Egress is deny-by-default. If a request fails with 403/502 "Blocked by
+  network policy", inspect `sbx policy log`. The host may compose a reviewed
+  allow rule, but organization governance can still deny the destination.
