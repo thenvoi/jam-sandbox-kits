@@ -1,0 +1,12 @@
+schemaVersion: "2"
+kind: mixin
+name: jam-managed-workspace
+displayName: Jam managed workspace workflow
+description: "Installs the versioned native Codex skill for Jam-managed, zero-to-many-repository workspaces. Jam supplies exact-session tools at runtime; this mixin adds workflow guidance only."
+
+# Deliberately no agentContext, commands, credentials, environment, or network
+# policy. The native skill is copied to $HOME/.agents/skills, which stock Codex
+# discovers independently of CODEX_HOME. Jam remains the sole runtime-tool and
+# credential authority, and the managed workspace receives no kit-owned files.
+# sbx v0.34 rejects the newer `requires.agent` field, so Jam's typed Managed
+# Codex default enforces affinity until the supported Docker consumer accepts it.

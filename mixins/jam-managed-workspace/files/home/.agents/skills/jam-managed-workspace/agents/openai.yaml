@@ -1,0 +1,4 @@
+interface:
+  display_name: "Jam Managed Workspace"
+  short_description: "Work safely across Jam sandbox repositories"
+  default_prompt: "Use $jam-managed-workspace to inspect repositories, clone additional repositories, and preserve work safely."
