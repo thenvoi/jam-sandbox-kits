@@ -4,6 +4,7 @@ set -eu
 repo_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 kit="$repo_root/mixins/jam-managed-workspace"
 skill="$kit/files/home/.agents/skills/jam-managed-workspace/SKILL.md"
+release="$repo_root/releases/jam-managed-workspace-1.0.0.json"
 
 fail() {
   printf 'managed-workspace-skill: %s\n' "$1" >&2
@@ -12,6 +13,22 @@ fail() {
 
 test -f "$kit/spec.yaml" || fail "missing mixin spec"
 test -f "$skill" || fail "missing native Codex skill"
+test -f "$release" || fail "missing immutable release manifest"
+
+git -C "$repo_root" diff --quiet --cached --diff-filter=D -- "$kit" \
+  || fail "reviewed kit files may not be deleted from the release tree"
+git -C "$repo_root" diff --quiet -- "$kit" \
+  || fail "stage kit changes before validating release metadata"
+expected_tree=$(git -C "$repo_root" write-tree --prefix=mixins/jam-managed-workspace/)
+actual_tree=$(jq -r '.sourceTree' "$release")
+test "$actual_tree" = "$expected_tree" || fail "release source tree does not match the reviewed kit"
+jq -e '
+  .schemaVersion == 1 and
+  .name == "jam-managed-workspace" and
+  .contract == "jam-managed-workspace-v1" and
+  .ociTag == "docker.io/vladthenvoi/jam-managed-workspace:1.0.0" and
+  (.ociDigest | test("^docker.io/vladthenvoi/jam-managed-workspace@sha256:[0-9a-f]{64}$"))
+' "$release" >/dev/null || fail "invalid immutable release manifest"
 
 command -v sbx >/dev/null 2>&1 || fail "sbx is required for canonical kit validation"
 sbx kit validate "$kit" >/dev/null

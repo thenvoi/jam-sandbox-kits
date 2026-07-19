@@ -51,3 +51,27 @@ It runs Docker's canonical kit validator/normalized inspector and verifies the
 native skill location, protocol/tool contract, least-authority boundary, and
 absence of credentials, commands, network policy, workspace files, or guest
 host-control selectors.
+
+## Published releases
+
+The public GitHub repository is the reviewable source. Docker Hub carries the
+OCI kit consumed by Docker Sandboxes so users do not need to expand Docker's
+default `kit.allowedSources`. Jam pins the digest, never the mutable version tag.
+
+| Kit | Source tree | Version tag | Immutable consumer reference |
+|---|---|---|---|
+| `jam-managed-workspace-v1` | `ca2c04df615961a688c292faa0cab325485f6412` | `docker.io/vladthenvoi/jam-managed-workspace:1.0.0` | `docker.io/vladthenvoi/jam-managed-workspace@sha256:ecc35d251eca1b079660094297f88752e87c9f322ff1cf28241bc669006e951c` |
+
+The machine-readable release record is
+[`releases/jam-managed-workspace-1.0.0.json`](./releases/jam-managed-workspace-1.0.0.json).
+Verify the exact artifact with:
+
+```sh
+sbx kit inspect 'docker.io/vladthenvoi/jam-managed-workspace@sha256:ecc35d251eca1b079660094297f88752e87c9f322ff1cf28241bc669006e951c' --json
+```
+
+The initial OCI release uses the authenticated publisher's `vladthenvoi`
+namespace because that Docker Hub account has no `thenvoi` organization
+membership. Moving the artifact later requires a fresh publication, digest,
+release record, Jam pin, and consumer verification; a namespace alias is not
+assumed.
