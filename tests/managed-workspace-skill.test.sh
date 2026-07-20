@@ -4,7 +4,7 @@ set -eu
 repo_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 kit="$repo_root/mixins/jam-managed-workspace"
 skill="$kit/files/home/.agents/skills/jam-managed-workspace/SKILL.md"
-release="$repo_root/releases/jam-managed-workspace-1.0.2.json"
+release="$repo_root/releases/jam-managed-workspace-1.0.3.json"
 
 fail() {
   printf 'managed-workspace-skill: %s\n' "$1" >&2
@@ -26,7 +26,7 @@ jq -e '
   .schemaVersion == 1 and
   .name == "jam-managed-workspace" and
   .contract == "jam-managed-workspace-v1" and
-  .ociTag == "docker.io/vladthenvoi/jam-managed-workspace:1.0.2" and
+  .ociTag == "docker.io/vladthenvoi/jam-managed-workspace:1.0.3" and
   (.ociDigest | test("^docker.io/vladthenvoi/jam-managed-workspace@sha256:[0-9a-f]{64}$"))
 ' "$release" >/dev/null || fail "invalid immutable release manifest"
 
@@ -42,8 +42,24 @@ assert manifest["schemaVersion"] == "2"
 assert manifest["kind"] == "mixin"
 assert manifest["name"] == "jam-managed-workspace"
 assert "Codex" in manifest["description"]
-for forbidden in ("requires", "credentials", "caps", "environment", "commands", "agentContext"):
+for forbidden in ("requires", "commands", "agentContext"):
     assert not manifest.get(forbidden), forbidden
+credentials = artifact["credentials"]
+assert len(credentials) == 1
+github = credentials[0]
+assert github["service"] == "github"
+assert github["required"] is True
+api_key = github["apiKey"]
+assert api_key["name"] == "GITHUB_TOKEN"
+assert api_key["proxyManaged"] is True
+inject = {(item["domain"], item["header"], item["format"], item.get("username")) for item in api_key["inject"]}
+assert inject == {
+    ("api.github.com", "Authorization", "Bearer %s", None),
+    ("raw.githubusercontent.com", "Authorization", "Bearer %s", None),
+    ("github.com", "Authorization", "Basic %s", "x-access-token"),
+}
+allowed = set(artifact["caps"]["network"]["allow"])
+assert {"github.com:443", "api.github.com:443", "raw.githubusercontent.com:443"} <= allowed
 files = artifact["files"]
 assert {f["relativePath"] for f in files} == {
     ".agents/skills/jam-managed-workspace/SKILL.md",
@@ -67,6 +83,7 @@ for required in \
   WorkspaceClone \
   WorkspaceBranch \
   WorkspaceCommit \
+  WorkspacePush \
   WorkspaceOperation \
   'zero, one, or many' \
   'Band board' \
@@ -84,8 +101,6 @@ for forbidden in \
   'jam runtime workspace-' \
   BAND_API_KEY \
   BAND_AGENT_API_KEY \
-  GH_TOKEN \
-  GITHUB_TOKEN \
   OPENAI_API_KEY; do
   if rg -Fq -- "$forbidden" "$skill"; then
     fail "skill contains forbidden selector, guest CLI path, or secret name: $forbidden"

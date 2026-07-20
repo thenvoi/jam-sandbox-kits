@@ -8,7 +8,7 @@ Docker Sandbox kits, mixins, and verified runtime recipes used with
 | Path | Kind | Purpose |
 |---|---|---|
 | [`mixins/band`](./mixins/band/) | Docker Sandbox `mixin` | Adds Band network policy, proxy-managed bootstrap credentials, and deterministic self-onboarding context to an existing coding-agent sandbox. |
-| [`mixins/jam-managed-workspace`](./mixins/jam-managed-workspace/) | Docker Sandbox `mixin` | Installs the native `jam-managed-workspace-v1` Codex skill for Jam-owned zero-to-many-repository workspaces without adding credentials, network policy, commands, or workspace files. |
+| [`mixins/jam-managed-workspace`](./mixins/jam-managed-workspace/) | Docker Sandbox `mixin` | Installs the native `jam-managed-workspace-v1` Codex skill and a host-proxied GitHub credential/network contract for Jam-owned zero-to-many-repository workspaces. |
 | [`recipes/copilot-runtime.md`](./recipes/copilot-runtime.md) | Verified recipe | Runs Jam's owned Copilot SDK runtime through Docker's built-in `copilot` template; a custom image is unnecessary. |
 
 ## Ownership boundary
@@ -25,7 +25,9 @@ documented acceptance gate cannot be met by the built-in template.
 image. It places one native skill under `$HOME/.agents/skills`, a stock Codex
 discovery location that does not depend on `CODEX_HOME`. Jam supplies and scopes
 the corresponding dynamic tools at runtime. The mixin does not duplicate that
-authority or modify the Jam-owned source workspace.
+authority or modify the Jam-owned source workspace. Its GitHub declaration is
+the Docker-side half of the host `github` service-secret contract; only the
+`proxy-managed` sentinel enters the guest.
 
 ## Safety and release rules
 
@@ -48,9 +50,9 @@ tests/managed-workspace-skill.test.sh
 ```
 
 It runs Docker's canonical kit validator/normalized inspector and verifies the
-native skill location, protocol/tool contract, least-authority boundary, and
-absence of credentials, commands, network policy, workspace files, or guest
-host-control selectors.
+native skill location, protocol/tool contract, least-authority boundary, exact
+proxy-managed GitHub injection/domains, and absence of commands, workspace
+files, raw credentials, or guest host-control selectors.
 
 ## Published releases
 
