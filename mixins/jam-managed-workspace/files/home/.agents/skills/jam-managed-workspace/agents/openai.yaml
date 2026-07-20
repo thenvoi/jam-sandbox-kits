@@ -1,4 +1,4 @@
 interface:
   display_name: "Jam Managed Workspace"
   short_description: "Work safely across Jam sandbox repositories"
-  default_prompt: "Use $jam-managed-workspace to inspect repositories, clone or branch as needed, commit and push staged work through exact-session tools, and preserve work safely."
+  default_prompt: "Use $jam-managed-workspace to inspect repositories, clone or branch as needed, commit, push, and open or update a pull request through exact-session tools, and preserve work safely."
