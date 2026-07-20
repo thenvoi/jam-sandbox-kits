@@ -1,6 +1,6 @@
 ---
 name: jam-managed-workspace
-description: Work safely in a Jam-managed Docker Sandbox workspace with zero, one, or many repositories. Use when Codex needs to inspect workspace repositories, verify GitHub readiness, clone another repository, create a branch, manage its private coding-session tasks, preserve unpushed work, or report Jam runtime readiness and recovery blockers.
+description: Work safely in a Jam-managed Docker Sandbox workspace with zero, one, or many repositories. Use when Codex needs to inspect workspace repositories, verify GitHub readiness, clone another repository, create a branch or commit, manage its private coding-session tasks, preserve unpushed work, or report Jam runtime readiness and recovery blockers.
 ---
 
 # Jam Managed Workspace
@@ -33,16 +33,25 @@ as the identity of the agent, room, runtime host, or runtime session.
 4. Call `WorkspaceBranch` with the exact relative repository path reported by
    inventory, a new branch name, and an optional start point. Poll the returned
    operation ID with `WorkspaceOperation`, then refresh inventory.
-5. Use ordinary `git` and `gh` inside the repository for commit, push,
-   pull-request, and check workflows until Jam advertises their exact-session
-   tools.
-6. Report the repository, relative path, remote owner/name, branch, dirty state,
+5. Use ordinary `git add` to select the intended changes. Then call
+   `WorkspaceCommit` with the exact relative repository path and a bounded
+   commit message. Poll its operation ID with `WorkspaceOperation`. Jam applies
+   the operator-owned author and signing policy; never try to pass or override
+   author identity, signing mode, runtime identity, or another session.
+6. Use ordinary `git` and `gh` inside the repository for push, pull-request,
+   and check workflows until Jam advertises their exact-session tools.
+7. Report the repository, relative path, remote owner/name, branch, dirty state,
    ahead state, PR URL, and check result relevant to the task.
 
 Do not call host-side Jam workspace commands from the guest. Jam injects these
 capabilities as exact-session tools with no agent, room, host, workspace, or
 runtime-session selector. If a tool is absent, report that the runtime capability
 is unavailable; do not invent a socket, selector, or CLI path.
+
+If `WorkspaceCommit` reports missing identity, the operator must configure an
+explicit author in the runtime template or persistent sandbox Git
+`user.name`/`user.email`. If required signing fails, report the blocker; Jam
+never retries that commit unsigned.
 
 ## Track the coding session's work
 
