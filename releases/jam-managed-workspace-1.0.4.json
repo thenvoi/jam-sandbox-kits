@@ -4,5 +4,5 @@
   "contract": "jam-managed-workspace-v1",
   "sourceTree": "50898bd01edc5413fac1e41cd53026817389559c",
   "ociTag": "docker.io/vladthenvoi/jam-managed-workspace:1.0.4",
-  "ociDigest": "docker.io/vladthenvoi/jam-managed-workspace@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+  "ociDigest": "docker.io/vladthenvoi/jam-managed-workspace@sha256:95aad9693a9dcc5d7b487cb94b0ed4c85a821114483fecdc012df7d076c2cceb"
 }
