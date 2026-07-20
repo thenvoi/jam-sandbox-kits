@@ -1,6 +1,6 @@
 ---
 name: jam-managed-workspace
-description: Work safely in a Jam-managed Docker Sandbox workspace with zero, one, or many repositories. Use when Codex needs to inspect workspace repositories, verify GitHub readiness, clone another repository, create a branch or commit, manage its private coding-session tasks, preserve unpushed work, or report Jam runtime readiness and recovery blockers.
+description: Work safely in a Jam-managed Docker Sandbox workspace with zero, one, or many repositories. Use when Codex needs to inspect workspace repositories, verify GitHub readiness, clone another repository, create a branch, commit, or push, manage its private coding-session tasks, preserve unpushed work, or report Jam runtime readiness and recovery blockers.
 ---
 
 # Jam Managed Workspace
@@ -38,9 +38,13 @@ as the identity of the agent, room, runtime host, or runtime session.
    commit message. Poll its operation ID with `WorkspaceOperation`. Jam applies
    the operator-owned author and signing policy; never try to pass or override
    author identity, signing mode, runtime identity, or another session.
-6. Use ordinary `git` and `gh` inside the repository for push, pull-request,
-   and check workflows until Jam advertises their exact-session tools.
-7. Report the repository, relative path, remote owner/name, branch, dirty state,
+6. Call `WorkspacePush` with the exact relative repository path. Jam fixes the
+   remote and refspec to the current branch's same-named `origin` branch; the
+   tool cannot redirect Docker-managed credentials. Poll its operation ID with
+   `WorkspaceOperation`, then refresh inventory.
+7. Use ordinary `gh` inside the repository for pull-request and check workflows
+   until Jam advertises their exact-session tools.
+8. Report the repository, relative path, remote owner/name, branch, dirty state,
    ahead state, PR URL, and check result relevant to the task.
 
 Do not call host-side Jam workspace commands from the guest. Jam injects these
@@ -52,6 +56,11 @@ If `WorkspaceCommit` reports missing identity, the operator must configure an
 explicit author in the runtime template or persistent sandbox Git
 `user.name`/`user.email`. If required signing fails, report the blocker; Jam
 never retries that commit unsigned.
+
+If `WorkspacePush` reports missing GitHub authentication, the operator must
+configure Docker's `github` service secret. Never ask for the token in the
+guest. Detached HEAD and missing `origin` are explicit blockers; do not invent a
+remote or refspec.
 
 ## Track the coding session's work
 

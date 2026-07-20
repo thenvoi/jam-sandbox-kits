@@ -2,11 +2,40 @@ schemaVersion: "2"
 kind: mixin
 name: jam-managed-workspace
 displayName: Jam managed workspace workflow
-description: "Installs the versioned native Codex skill for Jam-managed, zero-to-many-repository workspaces. Jam supplies exact-session tools at runtime; this mixin adds workflow guidance only."
+description: "Installs the versioned native Codex skill and Docker proxy-managed GitHub access for Jam-managed, zero-to-many-repository workspaces. Jam supplies exact-session tools at runtime."
 
-# Deliberately no agentContext, commands, credentials, environment, or network
-# policy. The native skill is copied to $HOME/.agents/skills, which stock Codex
-# discovers independently of CODEX_HOME. Jam remains the sole runtime-tool and
-# credential authority, and the managed workspace receives no kit-owned files.
+# The native skill is copied to $HOME/.agents/skills, which stock Codex
+# discovers independently of CODEX_HOME. GitHub is declared here because a
+# stored `sbx secret ... github` is inert until a composed kit declares the
+# proxy-managed environment/header contract. The real token stays host-side;
+# the guest sees only Docker's literal sentinel.
 # sbx v0.34 rejects the newer `requires.agent` field, so Jam's typed Managed
 # Codex default enforces affinity until the supported Docker consumer accepts it.
+
+credentials:
+  - service: github
+    description: "GitHub token for authenticated Git and gh operations"
+    required: true
+    apiKey:
+      name: GITHUB_TOKEN
+      proxyManaged: true
+      inject:
+        - domain: api.github.com
+          header: Authorization
+          format: "Bearer %s"
+        - domain: raw.githubusercontent.com
+          header: Authorization
+          format: "Bearer %s"
+        - domain: github.com
+          header: Authorization
+          format: "Basic %s"
+          username: x-access-token
+
+caps:
+  network:
+    allow:
+      - "github.com:443"
+      - "api.github.com:443"
+      - "raw.githubusercontent.com:443"
+      - "codeload.github.com:443"
+      - "objects.githubusercontent.com:443"
