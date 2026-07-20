@@ -15,7 +15,9 @@ description: "Installs the versioned native Codex skill and Docker proxy-managed
 credentials:
   - service: github
     description: "GitHub token for authenticated Git and gh operations"
-    required: true
+    # Public clones and non-GitHub work must remain usable without a secret.
+    # When present, Docker still injects only the proxy-managed sentinel.
+    required: false
     apiKey:
       name: GITHUB_TOKEN
       proxyManaged: true
