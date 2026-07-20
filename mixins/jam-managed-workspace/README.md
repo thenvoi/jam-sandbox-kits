@@ -19,7 +19,7 @@ Jam remains authoritative for exact-session runtime tools and attaches the
 reviewed, immutable OCI-digest-pinned mixin only to new Managed Docker-backed
 Codex runtime templates. The public source commit and release manifest identify
 the reviewed source tree behind that artifact. The skill explains how to use
-the injected clone, branch, commit, push, inventory, readiness, and operation-status
+the injected clone, branch, commit, push, pull-request, inventory, readiness, and operation-status
 tools; it cannot select another agent, room, runtime host, workspace, or
 runtime session. Commit author and signing policy remain operator-owned runtime
 template configuration and cannot be selected by the model.

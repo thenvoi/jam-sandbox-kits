@@ -1,6 +1,6 @@
 ---
 name: jam-managed-workspace
-description: Work safely in a Jam-managed Docker Sandbox workspace with zero, one, or many repositories. Use when Codex needs to inspect workspace repositories, verify GitHub readiness, clone another repository, create a branch, commit, or push, manage its private coding-session tasks, preserve unpushed work, or report Jam runtime readiness and recovery blockers.
+description: Work safely in a Jam-managed Docker Sandbox workspace with zero, one, or many repositories. Use when Codex needs to inspect workspace repositories, verify GitHub readiness, clone another repository, create a branch, commit, push, or open a pull request, manage its private coding-session tasks, preserve unpushed work, or report Jam runtime readiness and recovery blockers.
 ---
 
 # Jam Managed Workspace
@@ -42,9 +42,13 @@ as the identity of the agent, room, runtime host, or runtime session.
    remote and refspec to the current branch's same-named `origin` branch; the
    tool cannot redirect Docker-managed credentials. Poll its operation ID with
    `WorkspaceOperation`, then refresh inventory.
-7. Use ordinary `gh` inside the repository for pull-request and check workflows
-   until Jam advertises their exact-session tools.
-8. Report the repository, relative path, remote owner/name, branch, dirty state,
+7. Call `WorkspacePullRequest` with the exact relative repository path, title,
+   and body. Jam updates the current branch's existing pull request or creates
+   one when absent; repository, head, and base selection cannot be redirected.
+   Poll its operation ID with `WorkspaceOperation`.
+8. Use ordinary `gh` inside the repository for check inspection until Jam
+   advertises its exact-session check tool.
+9. Report the repository, relative path, remote owner/name, branch, dirty state,
    ahead state, PR URL, and check result relevant to the task.
 
 Do not call host-side Jam workspace commands from the guest. Jam injects these
@@ -61,6 +65,11 @@ If `WorkspacePush` reports missing GitHub authentication, the operator must
 configure Docker's `github` service secret. Never ask for the token in the
 guest. Detached HEAD and missing `origin` are explicit blockers; do not invent a
 remote or refspec.
+
+If `WorkspacePullRequest` fails, report the classified blocker and preserve the
+branch. Never retry by selecting a different repository, head, base, remote, or
+credential path, and never put the pull-request body or a credential in command
+arguments or logs.
 
 ## Track the coding session's work
 
