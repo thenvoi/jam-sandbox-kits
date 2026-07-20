@@ -1,6 +1,6 @@
 ---
 name: jam-managed-workspace
-description: Work safely in a Jam-managed Docker Sandbox workspace with zero, one, or many repositories. Use when Codex needs to inspect workspace repositories, verify GitHub readiness, clone another repository, create a branch, commit, push, or open a pull request, manage its private coding-session tasks, preserve unpushed work, or report Jam runtime readiness and recovery blockers.
+description: Work safely in a Jam-managed Docker Sandbox workspace with zero, one, or many repositories. Use when Codex needs to inspect workspace repositories, verify GitHub readiness, clone another repository, create a branch, commit, push, open a pull request, inspect its checks, manage private coding-session tasks, preserve unpushed work, or report Jam runtime readiness and recovery blockers.
 ---
 
 # Jam Managed Workspace
@@ -46,8 +46,11 @@ as the identity of the agent, room, runtime host, or runtime session.
    and body. Jam updates the current branch's existing pull request or creates
    one when absent; repository, head, and base selection cannot be redirected.
    Poll its operation ID with `WorkspaceOperation`.
-8. Use ordinary `gh` inside the repository for check inspection until Jam
-   advertises its exact-session check tool.
+8. Call `WorkspaceChecks` with the exact relative repository path. Jam derives
+   the current branch's pull request and returns only a bounded aggregate state:
+   passed, pending, failed/cancelled, or no checks. Poll its operation ID with
+   `WorkspaceOperation`. Never select a PR number, URL, branch, remote, check,
+   credential, or another runtime session.
 9. Report the repository, relative path, remote owner/name, branch, dirty state,
    ahead state, PR URL, and check result relevant to the task.
 
@@ -70,6 +73,13 @@ If `WorkspacePullRequest` fails, report the classified blocker and preserve the
 branch. Never retry by selecting a different repository, head, base, remote, or
 credential path, and never put the pull-request body or a credential in command
 arguments or logs.
+
+If `WorkspaceChecks` reports no pull request, create one through
+`WorkspacePullRequest` before retrying. Pending checks are not a terminal task
+success; wait and inspect again. Failed or cancelled checks are blockers. Jam
+intentionally does not return check names, links, or provider output through the
+durable operation journal; use ordinary `gh` only when detailed diagnostics are
+needed and policy allows it.
 
 ## Track the coding session's work
 
