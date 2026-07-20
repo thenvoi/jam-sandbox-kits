@@ -61,13 +61,14 @@ default `kit.allowedSources`. Jam pins the digest, never the mutable version tag
 | Kit | Source tree | Version tag | Immutable consumer reference |
 |---|---|---|---|
 | `jam-managed-workspace-v1` | `ca2c04df615961a688c292faa0cab325485f6412` | `docker.io/vladthenvoi/jam-managed-workspace:1.0.0` | `docker.io/vladthenvoi/jam-managed-workspace@sha256:ecc35d251eca1b079660094297f88752e87c9f322ff1cf28241bc669006e951c` |
+| `jam-managed-workspace-v1` branch workflow | `f5982fd4064ecccd2322c30c827c00dcbe994db2` | `docker.io/vladthenvoi/jam-managed-workspace:1.0.1` | `docker.io/vladthenvoi/jam-managed-workspace@sha256:2f2e2c3fef8555051148aac5e151916b9ad5d3a0ee59b977e01f38a937877159` |
 
-The machine-readable release record is
-[`releases/jam-managed-workspace-1.0.0.json`](./releases/jam-managed-workspace-1.0.0.json).
+Machine-readable release records are under [`releases/`](./releases/); the latest is
+[`jam-managed-workspace-1.0.1.json`](./releases/jam-managed-workspace-1.0.1.json).
 Verify the exact artifact with:
 
 ```sh
-sbx kit inspect 'docker.io/vladthenvoi/jam-managed-workspace@sha256:ecc35d251eca1b079660094297f88752e87c9f322ff1cf28241bc669006e951c' --json
+sbx kit inspect 'docker.io/vladthenvoi/jam-managed-workspace@sha256:2f2e2c3fef8555051148aac5e151916b9ad5d3a0ee59b977e01f38a937877159' --json
 ```
 
 The initial OCI release uses the authenticated publisher's `vladthenvoi`
