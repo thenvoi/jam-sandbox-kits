@@ -1,6 +1,6 @@
 ---
 name: jam-managed-workspace
-description: Work safely in a Jam-managed Docker Sandbox workspace with zero, one, or many repositories. Use when Codex needs to inspect workspace repositories, verify GitHub readiness, clone another repository, manage its private coding-session tasks, preserve unpushed work, or report Jam runtime readiness and recovery blockers.
+description: Work safely in a Jam-managed Docker Sandbox workspace with zero, one, or many repositories. Use when Codex needs to inspect workspace repositories, verify GitHub readiness, clone another repository, create a branch, manage its private coding-session tasks, preserve unpushed work, or report Jam runtime readiness and recovery blockers.
 ---
 
 # Jam Managed Workspace
@@ -30,9 +30,13 @@ as the identity of the agent, room, runtime host, or runtime session.
 2. Retain the returned operation ID and poll only that operation with
    `WorkspaceOperation` until it reaches a terminal state.
 3. Refresh `WorkspaceRepositories` after success.
-4. Enter the reported repository and use ordinary `git` and `gh` for branch,
-   commit, push, pull-request, and check workflows.
-5. Report the repository, relative path, remote owner/name, branch, dirty state,
+4. Call `WorkspaceBranch` with the exact relative repository path reported by
+   inventory, a new branch name, and an optional start point. Poll the returned
+   operation ID with `WorkspaceOperation`, then refresh inventory.
+5. Use ordinary `git` and `gh` inside the repository for commit, push,
+   pull-request, and check workflows until Jam advertises their exact-session
+   tools.
+6. Report the repository, relative path, remote owner/name, branch, dirty state,
    ahead state, PR URL, and check result relevant to the task.
 
 Do not call host-side Jam workspace commands from the guest. Jam injects these
