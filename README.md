@@ -100,13 +100,14 @@ default `kit.allowedSources`. Jam pins the digest, never the mutable version tag
 | `jam-managed-workspace-v1` private-stdio bridge bootstrap | `39713bbed21228733d198b397ef8a774d1f94d12` | `docker.io/vladthenvoi/jam-managed-workspace:1.0.9` | `docker.io/vladthenvoi/jam-managed-workspace@sha256:a0162714988e895d6060eded0427b17869217b9fb74a7c60c663da7c67e70cb0` |
 | `jam-managed-workspace-v1` bounded large bridge responses | `d30e1905e5822b8d15ffadd56d9291f949e22a17` | `docker.io/vladthenvoi/jam-managed-workspace:1.0.10` | `docker.io/vladthenvoi/jam-managed-workspace@sha256:fd2985ed03d84b586a2e14f4192f7dbda4a1686483c68b2e6cb6e6749bd83f13` |
 | `jam-managed-workspace-v1` bounded WebSocket bridge | `650e47777f77407f9851bb6ae74a16c272e4db69` | `docker.io/vladthenvoi/jam-managed-workspace:1.0.11` | `docker.io/vladthenvoi/jam-managed-workspace@sha256:0cafdc8427ced357244f3e1c38ec56df65cde02b617e408bfc7b07a6b1d3ef60` |
+| `jam-managed-workspace-v1` runtime-host trust boundaries | `711b5614791e6bc56cf9486359673d427ff8bdf6` | `docker.io/vladthenvoi/jam-managed-workspace:1.0.12` | `docker.io/vladthenvoi/jam-managed-workspace@sha256:78e2557fd60f8da8ed80adba067525fd663576d53a84394c547070de9b452261` |
 
 Machine-readable release records are under [`releases/`](./releases/); the latest is
-[`jam-managed-workspace-1.0.11.json`](./releases/jam-managed-workspace-1.0.11.json).
+[`jam-managed-workspace-1.0.12.json`](./releases/jam-managed-workspace-1.0.12.json).
 Verify the exact artifact with:
 
 ```sh
-sbx kit inspect 'docker.io/vladthenvoi/jam-managed-workspace@sha256:0cafdc8427ced357244f3e1c38ec56df65cde02b617e408bfc7b07a6b1d3ef60' --json
+sbx kit inspect 'docker.io/vladthenvoi/jam-managed-workspace@sha256:78e2557fd60f8da8ed80adba067525fd663576d53a84394c547070de9b452261' --json
 ```
 
 The initial OCI release uses the authenticated publisher's `vladthenvoi`
