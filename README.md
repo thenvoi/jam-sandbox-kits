@@ -32,13 +32,16 @@ the Docker-side half of the host `github` service-secret contract; only the
 The mixin also installs `~/.local/bin/jam-local-platform-bridge`. Jam starts one
 instance for an explicitly enabled runtime session and injects a short-lived,
 session-scoped capability into that Codex thread. The helper listens only on
-guest loopback and forwards bounded HTTP frames over its owned stdio channel;
-it contains no host destination, credential, or persistent authority. Jam owns
-the fixed host destination, authorization lease, logging, cancellation, and
-cleanup. Jam bootstraps the helper over the same private stdio channel, so the
-capability never appears in `sbx exec` arguments and does not depend on Docker
-CLI environment-file forwarding. Installing the helper alone does not enable
-host access.
+guest loopback and forwards bounded HTTP requests and WebSocket byte streams
+over its owned stdio channel; it contains no host destination, credential, or
+persistent authority. WebSocket upgrades reject extensions, replace the
+attacker-controlled origin with Jam's fixed numeric-loopback upstream, and
+preserve the exact handshake and data bytes end to end. Jam owns the fixed host
+destination, authorization lease, rate and concurrency limits, logging,
+cancellation, and cleanup. Jam bootstraps the helper over the same private stdio
+channel, so the capability never appears in `sbx exec` arguments and does not
+depend on Docker CLI environment-file forwarding. Installing the helper alone
+does not enable host access.
 
 The remote Developer destination set includes Band/runtime services, GitHub,
 and common package/container registries. It is requested policy, not effective
@@ -68,7 +71,7 @@ tests/managed-workspace-skill.test.sh
 ```
 
 It runs Docker's canonical kit validator/normalized inspector and verifies the
-native skill and bridge-helper locations, protocol/tool contract,
+native skill and bridge-helper locations, HTTP/WebSocket protocol and tool contract,
 least-authority boundary, exact proxy-managed GitHub injection/domains, and
 absence of commands, workspace files, raw credentials, or guest host-control
 selectors. The helper's independent regression is:

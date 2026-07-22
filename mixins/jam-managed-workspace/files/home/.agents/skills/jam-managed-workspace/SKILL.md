@@ -106,6 +106,11 @@ Guest `localhost` is the sandbox itself, not the host. Use the approved local
 platform bridge only when Jam exposes that capability for this runtime. If the
 local platform bridge is absent, report it as unavailable; do not create a generic
 host proxy or claim that Docker network policy enables direct host localhost.
+The same injected bridge URL supports ordinary HTTP and WebSocket clients. For a
+WebSocket endpoint, change only the URL scheme from `http` to `ws` (or `https` to
+`wss`) and retain the injected capability header during the upgrade. Do not
+request WebSocket extensions such as compression. Jam preserves protocol bytes,
+but owns the fixed upstream origin, authorization, bounds, logging, and cleanup.
 
 For staging, corporate services, registries, or production, distinguish requested
 policy, effective Docker policy, credential readiness, and authenticated service

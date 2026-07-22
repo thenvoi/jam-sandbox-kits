@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import http from "node:http";
+import net from "node:net";
 import path from "node:path";
 import readline from "node:readline";
 import { fileURLToPath } from "node:url";
@@ -74,6 +75,13 @@ assert.equal((await request({})).status, 401);
 assert.equal((await request({ token: "wrong" })).status, 401);
 
 const lines = readline.createInterface({ input: child.stdout, crlfDelay: Infinity });
+const nextFrame = (label) => new Promise((resolve, reject) => {
+  const deadline = setTimeout(() => reject(new Error(`${label} frame timeout: ${stderr}`)), 5_000);
+  lines.once("line", (line) => {
+    clearTimeout(deadline);
+    resolve(JSON.parse(line));
+  });
+});
 const framePromise = new Promise((resolve) => lines.once("line", (line) => resolve(JSON.parse(line))));
 const clientPromise = request({
   token: capability,
@@ -127,6 +135,115 @@ child.stdin.write(
 const largeClient = await largeClientPromise;
 assert.equal(largeClient.status, 200);
 assert.deepEqual(largeClient.body, largeBody);
+
+function upgradeRequest({ token, extensions = false }) {
+  const socket = net.connect({ host: "127.0.0.1", port });
+  const headers = [
+    "GET /api/v1/socket/websocket?vsn=2.0.0 HTTP/1.1",
+    "Host: attacker-controlled.example",
+    "Connection: Upgrade",
+    "Upgrade: websocket",
+    "Sec-WebSocket-Version: 13",
+    "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==",
+    ...(extensions ? ["Sec-WebSocket-Extensions: permessage-deflate"] : []),
+    ...(token ? [`X-Jam-Bridge-Capability: ${token}`] : []),
+    "",
+    "",
+  ];
+  socket.write(headers.join("\r\n"));
+  return socket;
+}
+
+function readSocketOnce(socket, label) {
+  return new Promise((resolve, reject) => {
+    const deadline = setTimeout(() => reject(new Error(`${label} socket timeout: ${stderr}`)), 5_000);
+    socket.once("data", (data) => {
+      clearTimeout(deadline);
+      resolve(data);
+    });
+    socket.once("error", (error) => {
+      clearTimeout(deadline);
+      reject(error);
+    });
+  });
+}
+
+const unauthenticatedUpgrade = upgradeRequest({});
+assert.match((await readSocketOnce(unauthenticatedUpgrade, "unauthenticated upgrade")).toString(), /^HTTP\/1\.1 401 /);
+unauthenticatedUpgrade.destroy();
+
+const extensionUpgrade = upgradeRequest({ token: capability, extensions: true });
+assert.match((await readSocketOnce(extensionUpgrade, "extension upgrade")).toString(), /^HTTP\/1\.1 400 /);
+extensionUpgrade.destroy();
+
+const rejectedFramePromise = nextFrame("rejected websocket open");
+const rejectedWebsocket = upgradeRequest({ token: capability });
+const rejectedFrame = await rejectedFramePromise;
+const rejectedResponsePromise = readSocketOnce(rejectedWebsocket, "host websocket rejection");
+child.stdin.write(
+  `${JSON.stringify({
+    version: 1,
+    kind: "websocket_rejected",
+    request_id: rejectedFrame.request_id,
+    status: 502,
+    classification: "upstream_unavailable",
+  })}\n`,
+);
+assert.match((await rejectedResponsePromise).toString(), /^HTTP\/1\.1 502 /);
+rejectedWebsocket.destroy();
+
+const openFramePromise = nextFrame("websocket open");
+const websocket = upgradeRequest({ token: capability });
+const openFrame = await openFramePromise;
+assert.equal(openFrame.kind, "websocket_open");
+assert.equal(openFrame.runtime_session_id, runtimeSessionId);
+assert.equal(openFrame.capability, capability);
+assert.equal(openFrame.path, "/api/v1/socket/websocket?vsn=2.0.0");
+assert.equal(Object.hasOwn(openFrame, "origin"), false);
+assert.equal(openFrame.headers.some(([name]) => name === "host"), false);
+assert.equal(openFrame.headers.some(([name]) => name === "x-jam-bridge-capability"), false);
+assert.equal(openFrame.headers.some(([name]) => name === "sec-websocket-extensions"), false);
+
+const accepted = Buffer.from(
+  "HTTP/1.1 101 Switching Protocols\r\n" +
+    "Upgrade: websocket\r\n" +
+    "Connection: Upgrade\r\n" +
+    "Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=\r\n\r\n",
+);
+const handshakePromise = readSocketOnce(websocket, "websocket handshake");
+child.stdin.write(
+  `${JSON.stringify({
+    version: 1,
+    kind: "websocket_opened",
+    request_id: openFrame.request_id,
+    response_base64: accepted.toString("base64"),
+  })}\n`,
+);
+assert.deepEqual(await handshakePromise, accepted);
+
+const clientFrame = Buffer.from([0x81, 0x85, 1, 2, 3, 4, 0x69, 0x67, 0x6f, 0x68, 0x6e]);
+const clientDataPromise = nextFrame("client websocket data");
+websocket.write(clientFrame);
+const clientData = await clientDataPromise;
+assert.equal(clientData.kind, "websocket_data");
+assert.equal(clientData.request_id, openFrame.request_id);
+assert.deepEqual(Buffer.from(clientData.data_base64, "base64"), clientFrame);
+
+const serverFrame = Buffer.from([0x81, 0x05, 0x77, 0x6f, 0x72, 0x6c, 0x64]);
+const serverDataPromise = readSocketOnce(websocket, "server websocket data");
+child.stdin.write(
+  `${JSON.stringify({
+    version: 1,
+    kind: "websocket_data",
+    request_id: openFrame.request_id,
+    data_base64: serverFrame.toString("base64"),
+  })}\n`,
+);
+assert.deepEqual(await serverDataPromise, serverFrame);
+
+const closeFramePromise = nextFrame("websocket close");
+websocket.end();
+assert.equal((await closeFramePromise).kind, "websocket_close");
 
 const oversized = await request({
   token: capability,

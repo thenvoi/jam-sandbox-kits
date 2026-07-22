@@ -2,7 +2,7 @@ schemaVersion: "2"
 kind: mixin
 name: jam-managed-workspace
 displayName: Jam managed workspace workflow
-description: "Installs the versioned native Codex skill and Docker proxy-managed GitHub access for Jam-managed, zero-to-many-repository workspaces. Jam supplies exact-session tools at runtime."
+description: "Installs the versioned native Codex skill, bounded local-platform bridge helper, and Docker proxy-managed GitHub access for Jam-managed, zero-to-many-repository workspaces. Jam supplies exact-session tools at runtime."
 
 # The native skill is copied to $HOME/.agents/skills, which stock Codex
 # discovers independently of CODEX_HOME. GitHub is declared here because a

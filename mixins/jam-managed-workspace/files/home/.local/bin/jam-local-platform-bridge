@@ -12,9 +12,16 @@ const readline = require("node:readline");
 const VERSION = 1;
 const MAX_BODY = 4 * 1024 * 1024;
 const MAX_PENDING = 16;
+const MAX_WEBSOCKETS = 16;
+const MAX_WEBSOCKET_CHUNK = 256 * 1024;
+const MAX_WEBSOCKET_BUFFER = 4 * 1024 * 1024;
+const MAX_WEBSOCKET_HEADERS = 32;
+const MAX_WEBSOCKET_HEADER_BYTES = 16 * 1024;
+const MAX_WEBSOCKET_PATH_BYTES = 8 * 1024;
 const MAX_INITIALIZATION_LINE = 16 * 1024;
 const MAX_HOST_FRAME = 12 * 1024 * 1024;
 const REQUEST_TIMEOUT_MS = 30_000;
+const WEBSOCKET_OPEN_TIMEOUT_MS = 5_000;
 const FORBIDDEN_HEADERS = new Set([
   "connection",
   "content-length",
@@ -34,6 +41,9 @@ const FORBIDDEN_HEADERS = new Set([
 ]);
 
 const pending = new Map();
+const websockets = new Map();
+const stdoutBlockedSockets = new Set();
+let stdoutDrainPending = false;
 let runtimeSessionId;
 let capability;
 let server;
@@ -99,6 +109,96 @@ function forwardedHeaders(req) {
   return headers;
 }
 
+function validOriginPath(value) {
+  return (
+    typeof value === "string" &&
+    value.length > 0 &&
+    Buffer.byteLength(value) <= MAX_WEBSOCKET_PATH_BYTES &&
+    value.startsWith("/") &&
+    !value.startsWith("//") &&
+    !value.includes("#") &&
+    !/[\x00-\x20\x7f]/.test(value)
+  );
+}
+
+function websocketHeaders(req) {
+  const headers = [];
+  let bytes = 0;
+  for (let index = 0; index < req.rawHeaders.length; index += 2) {
+    const name = req.rawHeaders[index].toLowerCase();
+    const value = req.rawHeaders[index + 1];
+    if (FORBIDDEN_HEADERS.has(name) || name === "origin" || name === "sec-websocket-extensions") {
+      continue;
+    }
+    bytes += Buffer.byteLength(name) + Buffer.byteLength(value);
+    if (headers.length >= MAX_WEBSOCKET_HEADERS || bytes > MAX_WEBSOCKET_HEADER_BYTES) return null;
+    headers.push([name, value]);
+  }
+  return headers;
+}
+
+function rawSocketFailure(socket, status, message) {
+  if (socket.destroyed) return;
+  const body = Buffer.from(message);
+  const reasons = new Map([
+    [400, "Bad Request"],
+    [401, "Unauthorized"],
+    [413, "Content Too Large"],
+    [429, "Too Many Requests"],
+    [502, "Bad Gateway"],
+    [504, "Gateway Timeout"],
+  ]);
+  const head = Buffer.from(
+    `HTTP/1.1 ${status} ${reasons.get(status) || "Bad Gateway"}\r\n` +
+      "Connection: close\r\n" +
+      "Content-Type: text/plain; charset=utf-8\r\n" +
+      `Content-Length: ${body.length}\r\n\r\n`,
+  );
+  socket.end(Buffer.concat([head, body]));
+}
+
+function writeGuestFrame(frame, socket) {
+  const accepted = process.stdout.write(`${JSON.stringify(frame)}\n`);
+  if (!accepted && socket && !socket.destroyed) {
+    socket.pause();
+    stdoutBlockedSockets.add(socket);
+    if (!stdoutDrainPending) {
+      stdoutDrainPending = true;
+      process.stdout.once("drain", () => {
+        stdoutDrainPending = false;
+        for (const blocked of stdoutBlockedSockets) {
+          if (!blocked.destroyed) blocked.resume();
+        }
+        stdoutBlockedSockets.clear();
+      });
+    }
+  }
+}
+
+function decodeCanonicalBase64(value, maxBytes) {
+  if (typeof value !== "string" || value.length > Math.ceil(maxBytes * 4 / 3) + 4) return null;
+  const data = Buffer.from(value, "base64");
+  if (data.length > maxBytes || data.toString("base64") !== value) return null;
+  return data;
+}
+
+function closeWebsocket(requestId, notifyHost) {
+  const entry = websockets.get(requestId);
+  if (!entry) return;
+  websockets.delete(requestId);
+  clearTimeout(entry.timer);
+  if (notifyHost) {
+    writeGuestFrame({
+      version: VERSION,
+      kind: "websocket_close",
+      runtime_session_id: runtimeSessionId,
+      capability,
+      request_id: requestId,
+    });
+  }
+  if (!entry.socket.destroyed) entry.socket.destroy();
+}
+
 server = http.createServer((req, res) => {
   if (!authorized(req)) {
     fail(res, 401, "bridge capability required");
@@ -146,8 +246,8 @@ server = http.createServer((req, res) => {
       fail(res, 504, "bridge request timed out");
     }, REQUEST_TIMEOUT_MS);
     pending.set(requestId, { res, timer });
-    process.stdout.write(
-      `${JSON.stringify({
+    writeGuestFrame(
+      {
         version: VERSION,
         kind: "http_request",
         runtime_session_id: runtimeSessionId,
@@ -157,11 +257,67 @@ server = http.createServer((req, res) => {
         path: req.url,
         headers: forwardedHeaders(req),
         body_base64: Buffer.concat(chunks).toString("base64"),
-      })}\n`,
+      },
+      req.socket,
     );
   });
   req.on("error", () => {
     if (!res.headersSent) fail(res, 400, "invalid bridge request");
+  });
+});
+
+server.on("upgrade", (req, socket, head) => {
+  if (!authorized(req)) {
+    rawSocketFailure(socket, 401, "bridge capability required");
+    return;
+  }
+  const key = req.headers["sec-websocket-key"];
+  let decodedKey;
+  try {
+    decodedKey = typeof key === "string" ? Buffer.from(key, "base64") : Buffer.alloc(0);
+  } catch {
+    decodedKey = Buffer.alloc(0);
+  }
+  const headers = websocketHeaders(req);
+  if (
+    req.method !== "GET" ||
+    !validOriginPath(req.url) ||
+    req.headers["sec-websocket-version"] !== "13" ||
+    typeof key !== "string" ||
+    decodedKey.length !== 16 ||
+    decodedKey.toString("base64") !== key ||
+    req.headers["sec-websocket-extensions"] !== undefined ||
+    headers === null ||
+    head.length > MAX_WEBSOCKET_CHUNK
+  ) {
+    rawSocketFailure(socket, 400, "invalid websocket upgrade");
+    return;
+  }
+  if (websockets.size >= MAX_WEBSOCKETS) {
+    rawSocketFailure(socket, 429, "bridge websocket limit reached");
+    return;
+  }
+
+  const requestId = crypto.randomUUID();
+  socket.pause();
+  const timer = setTimeout(() => {
+    const entry = websockets.get(requestId);
+    if (!entry) return;
+    websockets.delete(requestId);
+    rawSocketFailure(entry.socket, 504, "bridge websocket open timed out");
+  }, WEBSOCKET_OPEN_TIMEOUT_MS);
+  websockets.set(requestId, { socket, timer, head, opened: false });
+  socket.once("end", () => closeWebsocket(requestId, true));
+  socket.once("close", () => closeWebsocket(requestId, true));
+  socket.once("error", () => closeWebsocket(requestId, true));
+  writeGuestFrame({
+    version: VERSION,
+    kind: "websocket_open",
+    runtime_session_id: runtimeSessionId,
+    capability,
+    request_id: requestId,
+    path: req.url,
+    headers,
   });
 });
 
@@ -183,7 +339,92 @@ readline.createInterface({ input: process.stdin, crlfDelay: Infinity }).on("line
     initialize(frame);
     return;
   }
-  if (frame.version !== VERSION || frame.kind !== "http_response") return;
+  if (frame.version !== VERSION) return;
+  if (frame.kind === "websocket_opened") {
+    const entry = websockets.get(frame.request_id);
+    if (!entry || entry.opened || typeof frame.response_base64 !== "string") return;
+    const response = decodeCanonicalBase64(frame.response_base64, MAX_WEBSOCKET_HEADER_BYTES);
+    if (!response) {
+      closeWebsocket(frame.request_id, false);
+      return;
+    }
+    if (
+      response.length > MAX_WEBSOCKET_HEADER_BYTES ||
+      !response.toString("latin1").startsWith("HTTP/1.1 101 ") ||
+      !response.toString("latin1").endsWith("\r\n\r\n")
+    ) {
+      closeWebsocket(frame.request_id, false);
+      return;
+    }
+    clearTimeout(entry.timer);
+    entry.opened = true;
+    entry.socket.write(response);
+    entry.socket.on("data", (chunk) => {
+      if (chunk.length > MAX_WEBSOCKET_CHUNK) {
+        closeWebsocket(frame.request_id, true);
+        return;
+      }
+      writeGuestFrame(
+        {
+          version: VERSION,
+          kind: "websocket_data",
+          runtime_session_id: runtimeSessionId,
+          capability,
+          request_id: frame.request_id,
+          data_base64: chunk.toString("base64"),
+        },
+        entry.socket,
+      );
+    });
+    if (entry.head.length > 0) {
+      writeGuestFrame(
+        {
+          version: VERSION,
+          kind: "websocket_data",
+          runtime_session_id: runtimeSessionId,
+          capability,
+          request_id: frame.request_id,
+          data_base64: entry.head.toString("base64"),
+        },
+        entry.socket,
+      );
+      entry.head = Buffer.alloc(0);
+    }
+    entry.socket.resume();
+    return;
+  }
+  if (frame.kind === "websocket_rejected") {
+    const entry = websockets.get(frame.request_id);
+    if (!entry || entry.opened) return;
+    websockets.delete(frame.request_id);
+    clearTimeout(entry.timer);
+    const status = [400, 401, 413, 429, 502].includes(frame.status) ? frame.status : 502;
+    rawSocketFailure(entry.socket, status, "bridge websocket rejected");
+    return;
+  }
+  if (frame.kind === "websocket_data") {
+    const entry = websockets.get(frame.request_id);
+    if (!entry || !entry.opened || typeof frame.data_base64 !== "string") return;
+    if (frame.data_base64.length > Math.ceil(MAX_WEBSOCKET_CHUNK * 4 / 3) + 4) {
+      closeWebsocket(frame.request_id, true);
+      return;
+    }
+    const data = decodeCanonicalBase64(frame.data_base64, MAX_WEBSOCKET_CHUNK);
+    if (!data) {
+      closeWebsocket(frame.request_id, true);
+      return;
+    }
+    const accepted = entry.socket.write(data);
+    if (!accepted && entry.socket.writableLength > MAX_WEBSOCKET_BUFFER) {
+      closeWebsocket(frame.request_id, true);
+    }
+    return;
+  }
+  if (frame.kind === "websocket_close") {
+    closeWebsocket(frame.request_id, false);
+    return;
+  }
+  if (frame.kind !== "http_response") return;
   const entry = pending.get(frame.request_id);
   if (!entry) return;
   pending.delete(frame.request_id);
@@ -231,6 +472,7 @@ function shutdown() {
     if (!res.headersSent) fail(res, 503, "bridge stopped");
   }
   pending.clear();
+  for (const requestId of [...websockets.keys()]) closeWebsocket(requestId, false);
   setTimeout(() => process.exit(0), 1_000).unref();
 }
 
