@@ -12,7 +12,9 @@ It also installs the guest half of Jam's authenticated local-platform bridge at
 starts it for an explicitly enabled runtime session. It binds an ephemeral
 guest-loopback port, requires that session's short-lived capability, and sends
 bounded HTTP request frames to Jam over owned stdio. It does not know or select
-the host destination, and it persists no credential or authority.
+the host destination, and it persists no credential or authority. Jam sends
+the one-time initialization frame over private stdin before the listener opens;
+the capability is never placed in `sbx exec` arguments or environment flags.
 
 Stock Codex discovers user-scoped skills there independently of `CODEX_HOME`.
 The mixin writes no managed-workspace files and declares no commands or agent

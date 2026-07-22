@@ -12,6 +12,7 @@ const readline = require("node:readline");
 const VERSION = 1;
 const MAX_BODY = 4 * 1024 * 1024;
 const MAX_PENDING = 16;
+const MAX_CONTROL_LINE = 16 * 1024;
 const REQUEST_TIMEOUT_MS = 30_000;
 const FORBIDDEN_HEADERS = new Set([
   "connection",
@@ -31,24 +32,43 @@ const FORBIDDEN_HEADERS = new Set([
   "x-jam-bridge-capability",
 ]);
 
-function required(name) {
-  const value = process.env[name];
-  if (!value) {
-    process.stderr.write(`jam-local-platform-bridge: missing ${name}\n`);
-    process.exit(64);
-  }
-  return value;
-}
+const pending = new Map();
+let runtimeSessionId;
+let capability;
+let server;
 
-const runtimeSessionId = required("JAM_LOCAL_BRIDGE_RUNTIME_SESSION_ID");
-const capability = required("JAM_LOCAL_BRIDGE_CAPABILITY");
-const port = Number(required("JAM_LOCAL_BRIDGE_PORT"));
-if (!Number.isInteger(port) || port < 0 || port > 65535) {
-  process.stderr.write("jam-local-platform-bridge: invalid JAM_LOCAL_BRIDGE_PORT\n");
+function invalidInitialization() {
+  process.stderr.write("jam-local-platform-bridge: invalid initialization frame\n");
   process.exit(64);
 }
 
-const pending = new Map();
+function initialize(frame) {
+  if (
+    !frame ||
+    frame.version !== VERSION ||
+    frame.kind !== "initialize" ||
+    typeof frame.runtime_session_id !== "string" ||
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      frame.runtime_session_id,
+    ) ||
+    typeof frame.capability !== "string" ||
+    frame.capability.length < 16 ||
+    frame.capability.length > 256 ||
+    /[\x00-\x20\x7f]/.test(frame.capability) ||
+    !Number.isInteger(frame.port) ||
+    frame.port < 0 ||
+    frame.port > 65535
+  ) {
+    invalidInitialization();
+  }
+  runtimeSessionId = frame.runtime_session_id;
+  capability = frame.capability;
+  server.listen(frame.port, "127.0.0.1", () => {
+    const address = server.address();
+    const boundPort = typeof address === "object" && address ? address.port : 0;
+    process.stderr.write(`jam-local-platform-bridge: ready on guest loopback port ${boundPort}\n`);
+  });
+}
 
 function authorized(req) {
   const supplied = req.headers["x-jam-bridge-capability"];
@@ -78,7 +98,7 @@ function forwardedHeaders(req) {
   return headers;
 }
 
-const server = http.createServer((req, res) => {
+server = http.createServer((req, res) => {
   if (!authorized(req)) {
     fail(res, 401, "bridge capability required");
     return;
@@ -145,11 +165,21 @@ const server = http.createServer((req, res) => {
 });
 
 readline.createInterface({ input: process.stdin, crlfDelay: Infinity }).on("line", (line) => {
+  if (line.length > MAX_CONTROL_LINE) {
+    if (!runtimeSessionId) invalidInitialization();
+    process.stderr.write("jam-local-platform-bridge: ignored oversized host frame\n");
+    return;
+  }
   let frame;
   try {
     frame = JSON.parse(line);
   } catch {
+    if (!runtimeSessionId) invalidInitialization();
     process.stderr.write("jam-local-platform-bridge: ignored malformed host frame\n");
+    return;
+  }
+  if (!runtimeSessionId) {
+    initialize(frame);
     return;
   }
   if (frame.version !== VERSION || frame.kind !== "http_response") return;
@@ -190,7 +220,11 @@ readline.createInterface({ input: process.stdin, crlfDelay: Infinity }).on("line
 });
 
 function shutdown() {
-  server.close(() => process.exit(0));
+  if (server.listening) {
+    server.close(() => process.exit(0));
+  } else {
+    process.exit(0);
+  }
   for (const { res, timer } of pending.values()) {
     clearTimeout(timer);
     if (!res.headersSent) fail(res, 503, "bridge stopped");
@@ -202,9 +236,3 @@ function shutdown() {
 process.on("SIGINT", shutdown);
 process.on("SIGTERM", shutdown);
 process.stdin.on("end", shutdown);
-
-server.listen(port, "127.0.0.1", () => {
-  const address = server.address();
-  const boundPort = typeof address === "object" && address ? address.port : 0;
-  process.stderr.write(`jam-local-platform-bridge: ready on guest loopback port ${boundPort}\n`);
-});

@@ -14,12 +14,7 @@ const runtimeSessionId = "00000000-0000-4000-8000-000000000074";
 const capability = "test-capability-do-not-log";
 
 const child = spawn(process.execPath, [helper], {
-  env: {
-    PATH: process.env.PATH,
-    JAM_LOCAL_BRIDGE_RUNTIME_SESSION_ID: runtimeSessionId,
-    JAM_LOCAL_BRIDGE_CAPABILITY: capability,
-    JAM_LOCAL_BRIDGE_PORT: "0",
-  },
+  env: { PATH: process.env.PATH },
   stdio: ["pipe", "pipe", "pipe"],
 });
 let stderr = "";
@@ -27,6 +22,15 @@ let port = 0;
 child.stderr.on("data", (chunk) => {
   stderr += chunk;
 });
+child.stdin.write(
+  `${JSON.stringify({
+    version: 1,
+    kind: "initialize",
+    runtime_session_id: runtimeSessionId,
+    capability,
+    port: 0,
+  })}\n`,
+);
 await new Promise((resolve, reject) => {
   const deadline = setTimeout(() => reject(new Error(`helper readiness timeout: ${stderr}`)), 5_000);
   child.stderr.on("data", () => {
@@ -116,4 +120,25 @@ assert.equal(stderr.includes(capability), false);
 child.kill("SIGTERM");
 await new Promise((resolve) => child.once("exit", resolve));
 lines.close();
+
+const invalid = spawn(process.execPath, [helper], {
+  env: { PATH: process.env.PATH },
+  stdio: ["pipe", "pipe", "pipe"],
+});
+let invalidStderr = "";
+invalid.stderr.on("data", (chunk) => {
+  invalidStderr += chunk;
+});
+invalid.stdin.end(
+  `${JSON.stringify({
+    version: 1,
+    kind: "initialize",
+    runtime_session_id: "not-a-runtime-session",
+    capability,
+    port: 0,
+  })}\n`,
+);
+assert.equal(await new Promise((resolve) => invalid.once("exit", resolve)), 64);
+assert.equal(invalidStderr, "jam-local-platform-bridge: invalid initialization frame\n");
+assert.equal(invalidStderr.includes(capability), false);
 console.log("local-platform-bridge-helper: ok");

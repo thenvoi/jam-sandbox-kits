@@ -35,7 +35,10 @@ session-scoped capability into that Codex thread. The helper listens only on
 guest loopback and forwards bounded HTTP frames over its owned stdio channel;
 it contains no host destination, credential, or persistent authority. Jam owns
 the fixed host destination, authorization lease, logging, cancellation, and
-cleanup. Installing the helper alone does not enable host access.
+cleanup. Jam bootstraps the helper over the same private stdio channel, so the
+capability never appears in `sbx exec` arguments and does not depend on Docker
+CLI environment-file forwarding. Installing the helper alone does not enable
+host access.
 
 The remote Developer destination set includes Band/runtime services, GitHub,
 and common package/container registries. It is requested policy, not effective
