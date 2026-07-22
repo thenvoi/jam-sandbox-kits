@@ -107,6 +107,10 @@ for required in \
   'zero, one, or many' \
   'Band board' \
   'task tools' \
+  'one agent trust boundary' \
+  'stronger per-session isolation' \
+  '300 MB' \
+  'host-wide action' \
   'dirty or unpushed' \
   'operator-owned author and signing policy' \
   'never retries that commit unsigned' \

@@ -46,6 +46,14 @@ tools; it cannot select another agent, room, runtime host, workspace, or
 runtime session. Commit author and signing policy remain operator-owned runtime
 template configuration and cannot be selected by the model.
 
+The skill also explains the placement boundary that Jam—not the guest—controls.
+Shared placement is one agent trust boundary and amortizes one roughly 300 MB idle
+microVM across compatible room sessions. Dedicated placement consumes one microVM
+per active session in exchange for stronger process, filesystem, credential,
+network, resource, and failure isolation. Agent-, runtime-host-, and session-scoped
+lifecycle actions remain distinct host-side authority; the guest receives no host
+selector or lifecycle command.
+
 The installed `sbx v0.34` consumer rejects the newer `requires.agent` schema
 field, so the artifact cannot express Codex affinity in `spec.yaml` yet. Jam's
 typed Managed-Codex default enforces that affinity. Add `requires.agent: codex`

@@ -11,6 +11,23 @@ Jam owns runtime identity, workspace placement, credentials, and lifecycle outsi
 the guest. Treat repositories as work inside the current session workspace, never
 as the identity of the agent, room, runtime host, or runtime session.
 
+## Understand placement and action scope
+
+Jam selects the runtime-host placement; do not try to change or reproduce it from
+inside the guest. **Shared** placement lets compatible room sessions for one
+immutable agent identity reuse one microVM and app-server. Those sessions retain
+exact runtime-session directories and tools, but the microVM is one agent trust
+boundary—not hard isolation between rooms. **Dedicated** placement gives one
+runtime session its own microVM and is the stronger per-session isolation choice
+for process, filesystem, credential, network, resource, or failure boundaries.
+
+Each active microVM uses approximately 300 MB while idle. Shared placement
+amortizes that capacity across compatible rooms; Dedicated consumes it per active
+session. Agent-wide actions affect every room for the identity, a host-wide action
+affects every session sharing that runtime host, and an exact-session action affects
+only its room. Jam owns all lifecycle actions outside the guest. Never infer
+host-wide authority from the current directory, room, or injected session tools.
+
 ## Inspect before acting
 
 - Call `WorkspaceRepositories` to obtain the current zero, one, or many repository
