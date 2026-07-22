@@ -12,7 +12,8 @@ const readline = require("node:readline");
 const VERSION = 1;
 const MAX_BODY = 4 * 1024 * 1024;
 const MAX_PENDING = 16;
-const MAX_CONTROL_LINE = 16 * 1024;
+const MAX_INITIALIZATION_LINE = 16 * 1024;
+const MAX_HOST_FRAME = 12 * 1024 * 1024;
 const REQUEST_TIMEOUT_MS = 30_000;
 const FORBIDDEN_HEADERS = new Set([
   "connection",
@@ -165,7 +166,7 @@ server = http.createServer((req, res) => {
 });
 
 readline.createInterface({ input: process.stdin, crlfDelay: Infinity }).on("line", (line) => {
-  if (line.length > MAX_CONTROL_LINE) {
+  if (line.length > (runtimeSessionId ? MAX_HOST_FRAME : MAX_INITIALIZATION_LINE)) {
     if (!runtimeSessionId) invalidInitialization();
     process.stderr.write("jam-local-platform-bridge: ignored oversized host frame\n");
     return;
