@@ -46,6 +46,11 @@ tools; it cannot select another agent, room, runtime host, workspace, or
 runtime session. Commit author and signing policy remain operator-owned runtime
 template configuration and cannot be selected by the model.
 
+Band transport is deliberately not part of this guest mixin. `jamd` keeps the
+Band socket, durable queues, acknowledgements, and user/agent custody keys on the
+host and delivers only room messages through the owned app-server channel. The
+guest receives no Band key and must not establish a second Band connection.
+
 The skill also explains the placement boundary that Jam—not the guest—controls.
 Shared placement is one agent trust boundary and amortizes one roughly 300 MB idle
 microVM across compatible room sessions. Dedicated placement consumes one microVM

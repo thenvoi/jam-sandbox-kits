@@ -40,6 +40,12 @@ host-wide authority from the current directory, room, or injected session tools.
   production credential. Docker and Jam keep supported credentials outside the
   repository and ordinary command arguments.
 
+Band connectivity stays in jamd on the host. The daemon owns the Band socket,
+durable queue, room membership, delivery acknowledgements, and credential
+custody, then delivers only the room message over the owned app-server channel.
+Do not look for a Band credential or open a second Band connection from the
+guest; no Band custody key belongs in the sandbox environment.
+
 ## Clone another repository
 
 1. Call `WorkspaceClone` with credential-free `owner/repository` coordinates and

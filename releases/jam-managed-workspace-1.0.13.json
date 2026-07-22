@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "name": "jam-managed-workspace",
+  "contract": "jam-managed-workspace-v1",
+  "sourceTree": "9692e77ea63207fef092f4d5b699dff3c4577f93",
+  "ociTag": "docker.io/vladthenvoi/jam-managed-workspace:1.0.13",
+  "ociDigest": "docker.io/vladthenvoi/jam-managed-workspace@sha256:caa53c556adfb0f48f9658de49d1aa3c2221b9c086de9c60a46df544713600e4"
+}

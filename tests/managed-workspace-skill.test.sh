@@ -4,7 +4,7 @@ set -eu
 repo_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 kit="$repo_root/mixins/jam-managed-workspace"
 skill="$kit/files/home/.agents/skills/jam-managed-workspace/SKILL.md"
-release="$repo_root/releases/jam-managed-workspace-1.0.12.json"
+release="$repo_root/releases/jam-managed-workspace-1.0.13.json"
 
 fail() {
   printf 'managed-workspace-skill: %s\n' "$1" >&2
@@ -26,7 +26,7 @@ jq -e '
   .schemaVersion == 1 and
   .name == "jam-managed-workspace" and
   .contract == "jam-managed-workspace-v1" and
-  .ociTag == "docker.io/vladthenvoi/jam-managed-workspace:1.0.12" and
+  .ociTag == "docker.io/vladthenvoi/jam-managed-workspace:1.0.13" and
   (.ociDigest | test("^docker.io/vladthenvoi/jam-managed-workspace@sha256:[0-9a-f]{64}$"))
 ' "$release" >/dev/null || fail "invalid immutable release manifest"
 
@@ -114,6 +114,7 @@ for required in \
   'dirty or unpushed' \
   'operator-owned author and signing policy' \
   'never retries that commit unsigned' \
+  'Band connectivity stays in jamd' \
   'local platform bridge' \
   'WebSocket' \
   'Guest `localhost`'; do
@@ -124,7 +125,9 @@ for forbidden in \
   --runtime-session \
   'jam runtime workspace-' \
   BAND_API_KEY \
+  BAND_AGENT_KEY \
   BAND_AGENT_API_KEY \
+  BAND_USER_KEY \
   OPENAI_API_KEY; do
   if rg -Fq -- "$forbidden" "$skill"; then
     fail "skill contains forbidden selector, guest CLI path, or secret name: $forbidden"

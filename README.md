@@ -21,6 +21,11 @@ The preferred Codex path uses Docker's built-in `codex` template and Jam's nativ
 app-server stdio connection. Add a custom Codex kit here only when a concrete,
 documented acceptance gate cannot be met by the built-in template.
 
+For this Jam-owned path, Band connectivity, durable queues, acknowledgements,
+and custody keys remain in host-side `jamd`; the guest receives messages, not a
+Band credential. The separate `band` self-onboarding mixin serves a different
+architecture in which the sandboxed agent itself becomes the Band peer.
+
 `jam-managed-workspace` is intentionally a mixin rather than a custom Codex
 image. It places one native skill under `$HOME/.agents/skills`, a stock Codex
 discovery location that does not depend on `CODEX_HOME`. Jam supplies and scopes
@@ -101,13 +106,14 @@ default `kit.allowedSources`. Jam pins the digest, never the mutable version tag
 | `jam-managed-workspace-v1` bounded large bridge responses | `d30e1905e5822b8d15ffadd56d9291f949e22a17` | `docker.io/vladthenvoi/jam-managed-workspace:1.0.10` | `docker.io/vladthenvoi/jam-managed-workspace@sha256:fd2985ed03d84b586a2e14f4192f7dbda4a1686483c68b2e6cb6e6749bd83f13` |
 | `jam-managed-workspace-v1` bounded WebSocket bridge | `650e47777f77407f9851bb6ae74a16c272e4db69` | `docker.io/vladthenvoi/jam-managed-workspace:1.0.11` | `docker.io/vladthenvoi/jam-managed-workspace@sha256:0cafdc8427ced357244f3e1c38ec56df65cde02b617e408bfc7b07a6b1d3ef60` |
 | `jam-managed-workspace-v1` runtime-host trust boundaries | `711b5614791e6bc56cf9486359673d427ff8bdf6` | `docker.io/vladthenvoi/jam-managed-workspace:1.0.12` | `docker.io/vladthenvoi/jam-managed-workspace@sha256:78e2557fd60f8da8ed80adba067525fd663576d53a84394c547070de9b452261` |
+| `jam-managed-workspace-v1` host-owned Band custody boundary | `9692e77ea63207fef092f4d5b699dff3c4577f93` | `docker.io/vladthenvoi/jam-managed-workspace:1.0.13` | `docker.io/vladthenvoi/jam-managed-workspace@sha256:caa53c556adfb0f48f9658de49d1aa3c2221b9c086de9c60a46df544713600e4` |
 
 Machine-readable release records are under [`releases/`](./releases/); the latest is
-[`jam-managed-workspace-1.0.12.json`](./releases/jam-managed-workspace-1.0.12.json).
+[`jam-managed-workspace-1.0.13.json`](./releases/jam-managed-workspace-1.0.13.json).
 Verify the exact artifact with:
 
 ```sh
-sbx kit inspect 'docker.io/vladthenvoi/jam-managed-workspace@sha256:78e2557fd60f8da8ed80adba067525fd663576d53a84394c547070de9b452261' --json
+sbx kit inspect 'docker.io/vladthenvoi/jam-managed-workspace@sha256:caa53c556adfb0f48f9658de49d1aa3c2221b9c086de9c60a46df544713600e4' --json
 ```
 
 The initial OCI release uses the authenticated publisher's `vladthenvoi`
