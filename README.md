@@ -94,13 +94,14 @@ default `kit.allowedSources`. Jam pins the digest, never the mutable version tag
 | `jam-managed-workspace-v1` check-inspection workflow | `51e2a86bee0161930445f862f351a018e9ecd2a1` | `docker.io/vladthenvoi/jam-managed-workspace:1.0.6` | `docker.io/vladthenvoi/jam-managed-workspace@sha256:d0457e006f7a59dbb2504527a0600357e30d291d2d4870e2d893abc89beab5df` |
 | `jam-managed-workspace-v1` Developer network request | `419e8803f66a18c830b674797828c9219d893757` | `docker.io/vladthenvoi/jam-managed-workspace:1.0.7` | `docker.io/vladthenvoi/jam-managed-workspace@sha256:42d5cf09741a855fc731da689dfe99e16007d68d2675487ee6bf090679c42c38` |
 | `jam-managed-workspace-v1` authenticated local-platform bridge helper | `8827cf8f50b39b959b7b0ba6cfb7480873a88238` | `docker.io/vladthenvoi/jam-managed-workspace:1.0.8` | `docker.io/vladthenvoi/jam-managed-workspace@sha256:8b9c60e1a26cbd192362f0bc561766811dbf861012164f6d396701870db6555d` |
+| `jam-managed-workspace-v1` private-stdio bridge bootstrap | `39713bbed21228733d198b397ef8a774d1f94d12` | `docker.io/vladthenvoi/jam-managed-workspace:1.0.9` | `docker.io/vladthenvoi/jam-managed-workspace@sha256:a0162714988e895d6060eded0427b17869217b9fb74a7c60c663da7c67e70cb0` |
 
 Machine-readable release records are under [`releases/`](./releases/); the latest is
-[`jam-managed-workspace-1.0.8.json`](./releases/jam-managed-workspace-1.0.8.json).
+[`jam-managed-workspace-1.0.9.json`](./releases/jam-managed-workspace-1.0.9.json).
 Verify the exact artifact with:
 
 ```sh
-sbx kit inspect 'docker.io/vladthenvoi/jam-managed-workspace@sha256:8b9c60e1a26cbd192362f0bc561766811dbf861012164f6d396701870db6555d' --json
+sbx kit inspect 'docker.io/vladthenvoi/jam-managed-workspace@sha256:a0162714988e895d6060eded0427b17869217b9fb74a7c60c663da7c67e70cb0' --json
 ```
 
 The initial OCI release uses the authenticated publisher's `vladthenvoi`
