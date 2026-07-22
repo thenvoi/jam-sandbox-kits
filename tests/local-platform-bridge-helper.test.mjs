@@ -108,6 +108,26 @@ const client = await clientPromise;
 assert.equal(client.status, 201);
 assert.equal(client.body.toString(), '{"accepted":true}');
 
+const largeFramePromise = new Promise((resolve) =>
+  lines.once("line", (line) => resolve(JSON.parse(line))),
+);
+const largeClientPromise = request({ token: capability, path: "/large-response" });
+const largeFrame = await largeFramePromise;
+const largeBody = Buffer.alloc(64 * 1024, "x");
+child.stdin.write(
+  `${JSON.stringify({
+    version: 1,
+    kind: "http_response",
+    request_id: largeFrame.request_id,
+    status: 200,
+    headers: [["content-type", "application/octet-stream"]],
+    body_base64: largeBody.toString("base64"),
+  })}\n`,
+);
+const largeClient = await largeClientPromise;
+assert.equal(largeClient.status, 200);
+assert.deepEqual(largeClient.body, largeBody);
+
 const oversized = await request({
   token: capability,
   method: "POST",
