@@ -36,8 +36,41 @@ credentials:
 caps:
   network:
     allow:
+      # Developer-profile runtime services. Docker organization governance is
+      # authoritative and may still narrow any requested destination.
+      - "app.band.ai:443"
+      - "auth.band.ai:443"
+      - "api.openai.com:443"
+      - "chatgpt.com:443"
+      - "*.chatgpt.com:443"
+      - "*.openai.com:443"
+      - "*.oaistatic.com:443"
+      - "*.oaiusercontent.com:443"
+      # GitHub source and API surfaces.
       - "github.com:443"
       - "api.github.com:443"
       - "raw.githubusercontent.com:443"
       - "codeload.github.com:443"
       - "objects.githubusercontent.com:443"
+      - "ghcr.io:443"
+      # Common language/container registries needed by development workflows.
+      - "registry.npmjs.org:443"
+      - "pypi.org:443"
+      - "files.pythonhosted.org:443"
+      - "crates.io:443"
+      - "index.crates.io:443"
+      - "static.crates.io:443"
+      - "hex.pm:443"
+      - "repo.hex.pm:443"
+      - "repo.maven.apache.org:443"
+      - "proxy.golang.org:443"
+      - "sum.golang.org:443"
+      - "pub.dev:443"
+      - "rubygems.org:443"
+      - "nuget.org:443"
+      - "packagist.org:443"
+      - "docker.io:443"
+      - "registry-1.docker.io:443"
+      - "production.cloudflare.docker.com:443"
+      - "registry.k8s.io:443"
+      - "quay.io:443"

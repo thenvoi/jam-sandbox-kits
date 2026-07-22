@@ -4,7 +4,7 @@ set -eu
 repo_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 kit="$repo_root/mixins/jam-managed-workspace"
 skill="$kit/files/home/.agents/skills/jam-managed-workspace/SKILL.md"
-release="$repo_root/releases/jam-managed-workspace-1.0.6.json"
+release="$repo_root/releases/jam-managed-workspace-1.0.7.json"
 
 fail() {
   printf 'managed-workspace-skill: %s\n' "$1" >&2
@@ -26,7 +26,7 @@ jq -e '
   .schemaVersion == 1 and
   .name == "jam-managed-workspace" and
   .contract == "jam-managed-workspace-v1" and
-  .ociTag == "docker.io/vladthenvoi/jam-managed-workspace:1.0.6" and
+  .ociTag == "docker.io/vladthenvoi/jam-managed-workspace:1.0.7" and
   (.ociDigest | test("^docker.io/vladthenvoi/jam-managed-workspace@sha256:[0-9a-f]{64}$"))
 ' "$release" >/dev/null || fail "invalid immutable release manifest"
 
@@ -59,7 +59,23 @@ assert inject == {
     ("github.com", "Authorization", "Basic %s", "x-access-token"),
 }
 allowed = set(artifact["caps"]["network"]["allow"])
-assert {"github.com:443", "api.github.com:443", "raw.githubusercontent.com:443"} <= allowed
+assert {
+    "app.band.ai:443",
+    "auth.band.ai:443",
+    "api.openai.com:443",
+    "github.com:443",
+    "api.github.com:443",
+    "raw.githubusercontent.com:443",
+    "registry.npmjs.org:443",
+    "pypi.org:443",
+    "files.pythonhosted.org:443",
+    "crates.io:443",
+    "hex.pm:443",
+    "repo.maven.apache.org:443",
+    "proxy.golang.org:443",
+    "docker.io:443",
+    "ghcr.io:443",
+} <= allowed
 files = artifact["files"]
 assert {f["relativePath"] for f in files} == {
     ".agents/skills/jam-managed-workspace/SKILL.md",
