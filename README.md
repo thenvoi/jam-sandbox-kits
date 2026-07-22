@@ -8,7 +8,7 @@ Docker Sandbox kits, mixins, and verified runtime recipes used with
 | Path | Kind | Purpose |
 |---|---|---|
 | [`mixins/band`](./mixins/band/) | Docker Sandbox `mixin` | Adds Band network policy, proxy-managed bootstrap credentials, and deterministic self-onboarding context to an existing coding-agent sandbox. |
-| [`mixins/jam-managed-workspace`](./mixins/jam-managed-workspace/) | Docker Sandbox `mixin` | Installs the native `jam-managed-workspace-v1` Codex skill, requests the reviewed remote Developer destinations, and adds a host-proxied GitHub credential contract for Jam-owned zero-to-many-repository workspaces. |
+| [`mixins/jam-managed-workspace`](./mixins/jam-managed-workspace/) | Docker Sandbox `mixin` | Installs the native `jam-managed-workspace-v1` Codex skill and the guest half of Jam's authenticated local-platform bridge, requests the reviewed remote Developer destinations, and adds a host-proxied GitHub credential contract for Jam-owned zero-to-many-repository workspaces. |
 | [`recipes/copilot-runtime.md`](./recipes/copilot-runtime.md) | Verified recipe | Runs Jam's owned Copilot SDK runtime through Docker's built-in `copilot` template; a custom image is unnecessary. |
 
 ## Ownership boundary
@@ -28,6 +28,14 @@ the corresponding dynamic tools at runtime. The mixin does not duplicate that
 authority or modify the Jam-owned source workspace. Its GitHub declaration is
 the Docker-side half of the host `github` service-secret contract; only the
 `proxy-managed` sentinel enters the guest.
+
+The mixin also installs `~/.local/bin/jam-local-platform-bridge`. Jam starts one
+instance for an explicitly enabled runtime session and injects a short-lived,
+session-scoped capability into that Codex thread. The helper listens only on
+guest loopback and forwards bounded HTTP frames over its owned stdio channel;
+it contains no host destination, credential, or persistent authority. Jam owns
+the fixed host destination, authorization lease, logging, cancellation, and
+cleanup. Installing the helper alone does not enable host access.
 
 The remote Developer destination set includes Band/runtime services, GitHub,
 and common package/container registries. It is requested policy, not effective
@@ -57,9 +65,14 @@ tests/managed-workspace-skill.test.sh
 ```
 
 It runs Docker's canonical kit validator/normalized inspector and verifies the
-native skill location, protocol/tool contract, least-authority boundary, exact
-proxy-managed GitHub injection/domains, and absence of commands, workspace
-files, raw credentials, or guest host-control selectors.
+native skill and bridge-helper locations, protocol/tool contract,
+least-authority boundary, exact proxy-managed GitHub injection/domains, and
+absence of commands, workspace files, raw credentials, or guest host-control
+selectors. The helper's independent regression is:
+
+```sh
+node tests/local-platform-bridge-helper.test.mjs
+```
 
 ## Published releases
 
