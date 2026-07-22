@@ -11,10 +11,19 @@ It also installs the guest half of Jam's authenticated local-platform bridge at
 `$HOME/.local/bin/jam-local-platform-bridge`. The helper is inert until Jam
 starts it for an explicitly enabled runtime session. It binds an ephemeral
 guest-loopback port, requires that session's short-lived capability, and sends
-bounded HTTP request frames to Jam over owned stdio. It does not know or select
-the host destination, and it persists no credential or authority. Jam sends
-the one-time initialization frame over private stdin before the listener opens;
-the capability is never placed in `sbx exec` arguments or environment flags.
+bounded HTTP request frames and WebSocket byte streams to Jam over owned stdio.
+WebSocket extensions are rejected; the helper forwards the exact upstream
+handshake and data bytes without terminating or reframing the protocol. It does
+not know or select the host destination, and it persists no credential or
+authority. Jam sends the one-time initialization frame over private stdin before
+the listener opens; the capability is never placed in `sbx exec` arguments or
+environment flags.
+
+The helper permits at most 16 concurrent WebSockets per runtime session, not per
+host or installation. WebSocket chunks are capped at 256 KiB, traffic is capped
+at 32 MiB per minute in each direction, guest output buffering is capped at
+4 MiB, and an upgrade must complete within five seconds. Jam can revoke the
+session capability and close all associated connections immediately.
 
 Stock Codex discovers user-scoped skills there independently of `CODEX_HOME`.
 The mixin writes no managed-workspace files and declares no commands or agent

@@ -111,6 +111,8 @@ for required in \
   'operator-owned author and signing policy' \
   'never retries that commit unsigned' \
   'local platform bridge' \
+  'WebSocket' \
+  '256 KiB' \
   'Guest `localhost`'; do
   rg -Fq "$required" "$skill" || fail "missing required contract text: $required"
 done
