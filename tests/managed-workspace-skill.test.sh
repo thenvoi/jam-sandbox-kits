@@ -78,6 +78,7 @@ assert {
 } <= allowed
 files = artifact["files"]
 assert {f["relativePath"] for f in files} == {
+    ".local/bin/jam-local-platform-bridge",
     ".agents/skills/jam-managed-workspace/SKILL.md",
     ".agents/skills/jam-managed-workspace/agents/openai.yaml",
 }

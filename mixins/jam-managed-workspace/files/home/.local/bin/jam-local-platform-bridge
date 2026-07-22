@@ -1,0 +1,210 @@
+#!/usr/bin/env node
+"use strict";
+
+// Guest half of Jam's narrow local-platform bridge. Stdout is a framed JSONL
+// protocol owned by jamd; operational diagnostics go to stderr and never
+// include the capability, request headers, or request/response bodies.
+
+const crypto = require("node:crypto");
+const http = require("node:http");
+const readline = require("node:readline");
+
+const VERSION = 1;
+const MAX_BODY = 4 * 1024 * 1024;
+const MAX_PENDING = 16;
+const REQUEST_TIMEOUT_MS = 30_000;
+const FORBIDDEN_HEADERS = new Set([
+  "connection",
+  "content-length",
+  "host",
+  "keep-alive",
+  "proxy-authenticate",
+  "proxy-authorization",
+  "te",
+  "trailer",
+  "transfer-encoding",
+  "upgrade",
+  "forwarded",
+  "x-forwarded-for",
+  "x-forwarded-host",
+  "x-forwarded-proto",
+  "x-jam-bridge-capability",
+]);
+
+function required(name) {
+  const value = process.env[name];
+  if (!value) {
+    process.stderr.write(`jam-local-platform-bridge: missing ${name}\n`);
+    process.exit(64);
+  }
+  return value;
+}
+
+const runtimeSessionId = required("JAM_LOCAL_BRIDGE_RUNTIME_SESSION_ID");
+const capability = required("JAM_LOCAL_BRIDGE_CAPABILITY");
+const port = Number(required("JAM_LOCAL_BRIDGE_PORT"));
+if (!Number.isInteger(port) || port < 0 || port > 65535) {
+  process.stderr.write("jam-local-platform-bridge: invalid JAM_LOCAL_BRIDGE_PORT\n");
+  process.exit(64);
+}
+
+const pending = new Map();
+
+function authorized(req) {
+  const supplied = req.headers["x-jam-bridge-capability"];
+  if (typeof supplied !== "string") return false;
+  const expected = Buffer.from(capability);
+  const actual = Buffer.from(supplied);
+  return expected.length === actual.length && crypto.timingSafeEqual(expected, actual);
+}
+
+function fail(res, status, message) {
+  const body = Buffer.from(message);
+  res.writeHead(status, {
+    "content-type": "text/plain; charset=utf-8",
+    "content-length": String(body.length),
+  });
+  res.end(body);
+}
+
+function forwardedHeaders(req) {
+  const headers = [];
+  for (let index = 0; index < req.rawHeaders.length; index += 2) {
+    const name = req.rawHeaders[index].toLowerCase();
+    if (!FORBIDDEN_HEADERS.has(name)) {
+      headers.push([name, req.rawHeaders[index + 1]]);
+    }
+  }
+  return headers;
+}
+
+const server = http.createServer((req, res) => {
+  if (!authorized(req)) {
+    fail(res, 401, "bridge capability required");
+    return;
+  }
+  if (
+    !req.url ||
+    !req.url.startsWith("/") ||
+    req.url.startsWith("//") ||
+    req.url.includes("#") ||
+    /[\x00-\x20\x7f]/.test(req.url)
+  ) {
+    fail(res, 400, "origin-form path required");
+    return;
+  }
+  if (!["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"].includes(req.method)) {
+    fail(res, 405, "method denied");
+    return;
+  }
+  if (pending.size >= MAX_PENDING) {
+    fail(res, 429, "bridge concurrency limit reached");
+    return;
+  }
+
+  let size = 0;
+  const chunks = [];
+  let rejected = false;
+  req.on("data", (chunk) => {
+    size += chunk.length;
+    if (size > MAX_BODY) {
+      rejected = true;
+      chunks.length = 0;
+    } else if (!rejected) {
+      chunks.push(chunk);
+    }
+  });
+  req.on("end", () => {
+    if (rejected) {
+      fail(res, 413, "bridge request body too large");
+      return;
+    }
+    const requestId = crypto.randomUUID();
+    const timer = setTimeout(() => {
+      pending.delete(requestId);
+      fail(res, 504, "bridge request timed out");
+    }, REQUEST_TIMEOUT_MS);
+    pending.set(requestId, { res, timer });
+    process.stdout.write(
+      `${JSON.stringify({
+        version: VERSION,
+        kind: "http_request",
+        runtime_session_id: runtimeSessionId,
+        capability,
+        request_id: requestId,
+        method: req.method,
+        path: req.url,
+        headers: forwardedHeaders(req),
+        body_base64: Buffer.concat(chunks).toString("base64"),
+      })}\n`,
+    );
+  });
+  req.on("error", () => {
+    if (!res.headersSent) fail(res, 400, "invalid bridge request");
+  });
+});
+
+readline.createInterface({ input: process.stdin, crlfDelay: Infinity }).on("line", (line) => {
+  let frame;
+  try {
+    frame = JSON.parse(line);
+  } catch {
+    process.stderr.write("jam-local-platform-bridge: ignored malformed host frame\n");
+    return;
+  }
+  if (frame.version !== VERSION || frame.kind !== "http_response") return;
+  const entry = pending.get(frame.request_id);
+  if (!entry) return;
+  pending.delete(frame.request_id);
+  clearTimeout(entry.timer);
+  const status = Number.isInteger(frame.status) && frame.status >= 100 && frame.status <= 599
+    ? frame.status
+    : 502;
+  const headers = {};
+  if (Array.isArray(frame.headers)) {
+    for (const pair of frame.headers.slice(0, 32)) {
+      if (
+        Array.isArray(pair) &&
+        pair.length === 2 &&
+        typeof pair[0] === "string" &&
+        typeof pair[1] === "string" &&
+        !FORBIDDEN_HEADERS.has(pair[0].toLowerCase())
+      ) {
+        headers[pair[0]] = pair[1];
+      }
+    }
+  }
+  let body;
+  try {
+    body = Buffer.from(frame.body_base64 || "", "base64");
+  } catch {
+    body = Buffer.from("invalid bridge response");
+  }
+  if (body.length > 8 * 1024 * 1024) {
+    fail(entry.res, 502, "bridge response body too large");
+    return;
+  }
+  headers["content-length"] = String(body.length);
+  entry.res.writeHead(status, headers);
+  entry.res.end(body);
+});
+
+function shutdown() {
+  server.close(() => process.exit(0));
+  for (const { res, timer } of pending.values()) {
+    clearTimeout(timer);
+    if (!res.headersSent) fail(res, 503, "bridge stopped");
+  }
+  pending.clear();
+  setTimeout(() => process.exit(0), 1_000).unref();
+}
+
+process.on("SIGINT", shutdown);
+process.on("SIGTERM", shutdown);
+process.stdin.on("end", shutdown);
+
+server.listen(port, "127.0.0.1", () => {
+  const address = server.address();
+  const boundPort = typeof address === "object" && address ? address.port : 0;
+  process.stderr.write(`jam-local-platform-bridge: ready on guest loopback port ${boundPort}\n`);
+});

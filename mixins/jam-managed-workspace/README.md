@@ -7,6 +7,13 @@ This Codex-only Jam integration installs the native
 $HOME/.agents/skills/jam-managed-workspace/SKILL.md
 ```
 
+It also installs the guest half of Jam's authenticated local-platform bridge at
+`$HOME/.local/bin/jam-local-platform-bridge`. The helper is inert until Jam
+starts it for an explicitly enabled runtime session. It binds an ephemeral
+guest-loopback port, requires that session's short-lived capability, and sends
+bounded HTTP request frames to Jam over owned stdio. It does not know or select
+the host destination, and it persists no credential or authority.
+
 Stock Codex discovers user-scoped skills there independently of `CODEX_HOME`.
 The mixin writes no managed-workspace files and declares no commands or agent
 context. Its Developer network request covers Band/runtime services, GitHub,
@@ -38,4 +45,5 @@ root:
 
 ```sh
 tests/managed-workspace-skill.test.sh
+node tests/local-platform-bridge-helper.test.mjs
 ```
