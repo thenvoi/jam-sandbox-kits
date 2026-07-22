@@ -9,11 +9,15 @@ $HOME/.agents/skills/jam-managed-workspace/SKILL.md
 
 Stock Codex discovers user-scoped skills there independently of `CODEX_HOME`.
 The mixin writes no managed-workspace files and declares no commands or agent
-context. It does declare the reviewed GitHub domains plus Docker's
-proxy-managed `GITHUB_TOKEN` contract. The credential is optional so public
-clone and non-GitHub work do not block sandbox creation. A host-side `github`
-service secret is required for authenticated private clone, push, PR, and check
-workflows; the real token never enters the VM.
+context. Its Developer network request covers Band/runtime services, GitHub,
+and common language/container registries, plus Docker's proxy-managed
+`GITHUB_TOKEN` contract. Docker's effective local or organization policy stays
+authoritative: a requested allow is never evidence that traffic is effective.
+Configured staging and approved corporate HTTPS destinations remain dynamic
+Jam policy, not hard-coded public kit entries. The credential is optional so
+public clone and non-GitHub work do not block sandbox creation. A host-side
+`github` service secret is required for authenticated private clone, push, PR,
+and check workflows; the real token never enters the VM.
 
 Jam remains authoritative for exact-session runtime tools and attaches the
 reviewed, immutable OCI-digest-pinned mixin only to new Managed Docker-backed

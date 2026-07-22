@@ -8,7 +8,7 @@ Docker Sandbox kits, mixins, and verified runtime recipes used with
 | Path | Kind | Purpose |
 |---|---|---|
 | [`mixins/band`](./mixins/band/) | Docker Sandbox `mixin` | Adds Band network policy, proxy-managed bootstrap credentials, and deterministic self-onboarding context to an existing coding-agent sandbox. |
-| [`mixins/jam-managed-workspace`](./mixins/jam-managed-workspace/) | Docker Sandbox `mixin` | Installs the native `jam-managed-workspace-v1` Codex skill and a host-proxied GitHub credential/network contract for Jam-owned zero-to-many-repository workspaces. |
+| [`mixins/jam-managed-workspace`](./mixins/jam-managed-workspace/) | Docker Sandbox `mixin` | Installs the native `jam-managed-workspace-v1` Codex skill, requests the reviewed remote Developer destinations, and adds a host-proxied GitHub credential contract for Jam-owned zero-to-many-repository workspaces. |
 | [`recipes/copilot-runtime.md`](./recipes/copilot-runtime.md) | Verified recipe | Runs Jam's owned Copilot SDK runtime through Docker's built-in `copilot` template; a custom image is unnecessary. |
 
 ## Ownership boundary
@@ -28,6 +28,13 @@ the corresponding dynamic tools at runtime. The mixin does not duplicate that
 authority or modify the Jam-owned source workspace. Its GitHub declaration is
 the Docker-side half of the host `github` service-secret contract; only the
 `proxy-managed` sentinel enters the guest.
+
+The remote Developer destination set includes Band/runtime services, GitHub,
+and common package/container registries. It is requested policy, not effective
+policy: Docker organization governance can replace local and kit rules. Jam
+must inspect Docker's effective decision separately. Configured staging and
+approved corporate public HTTPS endpoints are runtime configuration and are
+therefore intentionally absent from this public static artifact.
 
 ## Safety and release rules
 
@@ -69,13 +76,14 @@ default `kit.allowedSources`. Jam pins the digest, never the mutable version tag
 | `jam-managed-workspace-v1` optional GitHub proxy workflow | `50898bd01edc5413fac1e41cd53026817389559c` | `docker.io/vladthenvoi/jam-managed-workspace:1.0.4` | `docker.io/vladthenvoi/jam-managed-workspace@sha256:95aad9693a9dcc5d7b487cb94b0ed4c85a821114483fecdc012df7d076c2cceb` |
 | `jam-managed-workspace-v1` pull-request workflow | `fed8bf0a28f15991ebacb4a60dd54cb6eb83e845` | `docker.io/vladthenvoi/jam-managed-workspace:1.0.5` | `docker.io/vladthenvoi/jam-managed-workspace@sha256:a26dfab23184101a907b9dbaa1eb560582fd1f747c20813094db9dce490443ea` |
 | `jam-managed-workspace-v1` check-inspection workflow | `51e2a86bee0161930445f862f351a018e9ecd2a1` | `docker.io/vladthenvoi/jam-managed-workspace:1.0.6` | `docker.io/vladthenvoi/jam-managed-workspace@sha256:d0457e006f7a59dbb2504527a0600357e30d291d2d4870e2d893abc89beab5df` |
+| `jam-managed-workspace-v1` Developer network request | `419e8803f66a18c830b674797828c9219d893757` | `docker.io/vladthenvoi/jam-managed-workspace:1.0.7` | `docker.io/vladthenvoi/jam-managed-workspace@sha256:42d5cf09741a855fc731da689dfe99e16007d68d2675487ee6bf090679c42c38` |
 
 Machine-readable release records are under [`releases/`](./releases/); the latest is
-[`jam-managed-workspace-1.0.6.json`](./releases/jam-managed-workspace-1.0.6.json).
+[`jam-managed-workspace-1.0.7.json`](./releases/jam-managed-workspace-1.0.7.json).
 Verify the exact artifact with:
 
 ```sh
-sbx kit inspect 'docker.io/vladthenvoi/jam-managed-workspace@sha256:d0457e006f7a59dbb2504527a0600357e30d291d2d4870e2d893abc89beab5df' --json
+sbx kit inspect 'docker.io/vladthenvoi/jam-managed-workspace@sha256:42d5cf09741a855fc731da689dfe99e16007d68d2675487ee6bf090679c42c38' --json
 ```
 
 The initial OCI release uses the authenticated publisher's `vladthenvoi`
