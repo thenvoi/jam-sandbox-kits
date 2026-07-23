@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "name": "band-mixin",
+  "contract": "band-mixin-v1",
+  "sourceTree": "58720cdbbe95985665eb776281d234ac5984f126",
+  "ociTag": "docker.io/vladthenvoi/band-mixin:1.0.0",
+  "ociDigest": "docker.io/vladthenvoi/band-mixin@sha256:79f9ba8f6a83d560f20f82ed7d86604f8c5400c3b9c12386e3df1a015d65d8df"
+}

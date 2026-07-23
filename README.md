@@ -103,6 +103,7 @@ default `kit.allowedSources`. Jam pins the digest, never the mutable version tag
 
 | Kit | Source tree | Version tag | Immutable consumer reference |
 |---|---|---|---|
+| `band-mixin-v1` | `58720cdbbe95985665eb776281d234ac5984f126` | `docker.io/vladthenvoi/band-mixin:1.0.0` | `docker.io/vladthenvoi/band-mixin@sha256:79f9ba8f6a83d560f20f82ed7d86604f8c5400c3b9c12386e3df1a015d65d8df` |
 | `jam-managed-workspace-v1` | `ca2c04df615961a688c292faa0cab325485f6412` | `docker.io/vladthenvoi/jam-managed-workspace:1.0.0` | `docker.io/vladthenvoi/jam-managed-workspace@sha256:ecc35d251eca1b079660094297f88752e87c9f322ff1cf28241bc669006e951c` |
 | `jam-managed-workspace-v1` branch workflow | `f5982fd4064ecccd2322c30c827c00dcbe994db2` | `docker.io/vladthenvoi/jam-managed-workspace:1.0.1` | `docker.io/vladthenvoi/jam-managed-workspace@sha256:2f2e2c3fef8555051148aac5e151916b9ad5d3a0ee59b977e01f38a937877159` |
 | `jam-managed-workspace-v1` commit workflow | `ec7647c57d8517d11699824720de01ed259ba911` | `docker.io/vladthenvoi/jam-managed-workspace:1.0.2` | `docker.io/vladthenvoi/jam-managed-workspace@sha256:9e10c38ebd5c2e4b633f1b627f3d6cd6104386e84bcaa9617b3cb972af87a6ab` |
@@ -118,13 +119,32 @@ default `kit.allowedSources`. Jam pins the digest, never the mutable version tag
 | `jam-managed-workspace-v1` runtime-host trust boundaries | `711b5614791e6bc56cf9486359673d427ff8bdf6` | `docker.io/vladthenvoi/jam-managed-workspace:1.0.12` | `docker.io/vladthenvoi/jam-managed-workspace@sha256:78e2557fd60f8da8ed80adba067525fd663576d53a84394c547070de9b452261` |
 | `jam-managed-workspace-v1` host-owned Band custody boundary | `9692e77ea63207fef092f4d5b699dff3c4577f93` | `docker.io/vladthenvoi/jam-managed-workspace:1.0.13` | `docker.io/vladthenvoi/jam-managed-workspace@sha256:caa53c556adfb0f48f9658de49d1aa3c2221b9c086de9c60a46df544713600e4` |
 
-Machine-readable release records are under [`releases/`](./releases/); the latest is
+Machine-readable release records are under [`releases/`](./releases/). The Band
+mixin record is [`band-mixin-1.0.0.json`](./releases/band-mixin-1.0.0.json), and
+the latest managed-workspace record is
 [`jam-managed-workspace-1.0.13.json`](./releases/jam-managed-workspace-1.0.13.json).
-Verify the exact artifact with:
+Verify the exact artifacts with:
 
 ```sh
+sbx kit inspect 'docker.io/vladthenvoi/band-mixin@sha256:79f9ba8f6a83d560f20f82ed7d86604f8c5400c3b9c12386e3df1a015d65d8df' --json
 sbx kit inspect 'docker.io/vladthenvoi/jam-managed-workspace@sha256:caa53c556adfb0f48f9658de49d1aa3c2221b9c086de9c60a46df544713600e4' --json
 ```
+
+To use the standalone Band mixin, store the bootstrap key under the kit's
+`band` service, then create the sandbox interactively so Docker can ask you to
+approve injection only to `app.band.ai`:
+
+```sh
+sbx secret set -g band
+sbx run codex --kit 'docker.io/vladthenvoi/band-mixin@sha256:79f9ba8f6a83d560f20f82ed7d86604f8c5400c3b9c12386e3df1a015d65d8df' .
+```
+
+That first consent creates the user-owned credential binding. A non-interactive
+create without an existing binding starts without injection and reports a
+warning; storing the secret alone does not authorize a destination. Compose a
+reviewed harness-specific Band integration as another kit or provide it in the
+base sandbox—the base mixin installs only the deterministic registration
+helper.
 
 The initial OCI release uses the authenticated publisher's `vladthenvoi`
 namespace because that Docker Hub account has no `thenvoi` organization

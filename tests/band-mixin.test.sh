@@ -4,6 +4,7 @@ set -eu
 repo_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 kit="$repo_root/mixins/band"
 spec="$kit/spec.yaml"
+release="$repo_root/releases/band-mixin-1.0.0.json"
 
 fail() {
   printf 'band-mixin: %s\n' "$1" >&2
@@ -11,7 +12,23 @@ fail() {
 }
 
 test -f "$spec" || fail "missing mixin spec"
+test -f "$release" || fail "missing immutable release manifest"
 command -v sbx >/dev/null 2>&1 || fail "sbx is required for canonical kit validation"
+
+git -C "$repo_root" diff --quiet --cached --diff-filter=D -- "$kit" \
+  || fail "reviewed kit files may not be deleted from the release tree"
+git -C "$repo_root" diff --quiet -- "$kit" \
+  || fail "stage kit changes before validating release metadata"
+expected_tree=$(git -C "$repo_root" write-tree --prefix=mixins/band/)
+actual_tree=$(jq -r '.sourceTree' "$release")
+test "$actual_tree" = "$expected_tree" || fail "release source tree does not match the reviewed kit"
+jq -e '
+  .schemaVersion == 1 and
+  .name == "band-mixin" and
+  .contract == "band-mixin-v1" and
+  .ociTag == "docker.io/vladthenvoi/band-mixin:1.0.0" and
+  .ociDigest == "docker.io/vladthenvoi/band-mixin@sha256:79f9ba8f6a83d560f20f82ed7d86604f8c5400c3b9c12386e3df1a015d65d8df"
+' "$release" >/dev/null || fail "invalid immutable release manifest"
 
 sbx kit validate "$kit" >/dev/null
 inspection=$(sbx kit inspect "$kit" --json)
