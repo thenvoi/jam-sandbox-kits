@@ -85,6 +85,16 @@ selectors. The helper's independent regression is:
 node tests/local-platform-bridge-helper.test.mjs
 ```
 
+Validate the standalone Band self-onboarding mixin with:
+
+```sh
+tests/band-mixin.test.sh
+```
+
+This freezes the normalized proxy-managed credential injection, exact reviewed
+helper source and checksum, network allowlist, T1 custody disclosure, and the
+absence of a custom sandbox image or entrypoint.
+
 ## Published releases
 
 The public GitHub repository is the reviewable source. Docker Hub carries the
