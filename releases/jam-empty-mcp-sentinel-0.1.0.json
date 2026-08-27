@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "name": "jam-empty-mcp-sentinel",
+  "contract": "jam-empty-mcp-sentinel-v1",
+  "sourceTree": "171476739acd19d8e2d6a625445039046e18077d",
+  "ociTag": "docker.io/vladthenvoi/jam-empty-mcp-sentinel:0.1.0",
+  "ociDigest": "docker.io/vladthenvoi/jam-empty-mcp-sentinel@sha256:63a610c31e4f6be882bab1e2f28b5888e53bd2ea972965fa57c9b1fb2a3f4cc3"
+}
