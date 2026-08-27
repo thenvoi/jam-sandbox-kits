@@ -1,0 +1,21 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.thenvoi/jam-empty-sentinel",
+  "description": "An inert sentinel MCP server that keeps an empty Jam selection fail-closed in Docker Sandboxes static MCP mode.",
+  "title": "Jam empty MCP sentinel",
+  "version": "0.1.0",
+  "repository": {
+    "url": "https://github.com/thenvoi/jam-sandbox-kits",
+    "source": "github",
+    "subfolder": "mcp-servers/empty-sentinel"
+  },
+  "packages": [
+    {
+      "registryType": "oci",
+      "identifier": "docker.io/vladthenvoi/jam-empty-mcp-sentinel@sha256:63a610c31e4f6be882bab1e2f28b5888e53bd2ea972965fa57c9b1fb2a3f4cc3",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ]
+}

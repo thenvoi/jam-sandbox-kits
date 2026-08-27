@@ -9,6 +9,7 @@ Docker Sandbox kits, mixins, and verified runtime recipes used with
 |---|---|---|
 | [`mixins/band`](./mixins/band/) | Docker Sandbox `mixin` | Adds Band network policy, proxy-managed bootstrap credentials, and deterministic self-onboarding context to an existing coding-agent sandbox. |
 | [`mixins/jam-managed-workspace`](./mixins/jam-managed-workspace/) | Docker Sandbox `mixin` | Installs the native `jam-managed-workspace-v1` Codex skill and the guest half of Jam's authenticated local-platform bridge, requests the reviewed remote Developer destinations, and adds a host-proxied GitHub credential contract for Jam-owned zero-to-many-repository workspaces. |
+| [`mcp-servers/empty-sentinel`](./mcp-servers/empty-sentinel/) | Docker MCP server | Exposes one inert status tool and gives Jam an explicit fail-closed static MCP set when an agent selects no external services. |
 | [`recipes/copilot-runtime.md`](./recipes/copilot-runtime.md) | Verified recipe | Runs Jam's owned Copilot SDK runtime through Docker's built-in `copilot` template; a custom image is unnecessary. |
 
 ## Ownership boundary
@@ -16,6 +17,11 @@ Docker Sandbox kits, mixins, and verified runtime recipes used with
 This repository owns assets for Jam and interactive coding-harness sandboxes.
 Deployable Python and TypeScript SDK-agent images stay in their respective SDK
 repositories. Jam core implementation stays in `thenvoi/tjam`.
+
+The empty sentinel exists because Docker treats an omitted static MCP set as dynamic discovery.
+Docker v0.39 rejects a static backend with zero tools, so the server declares one inert status
+tool and no prompts, resources, secrets, mounts, or network destinations. Jam selects it only when
+the user selects no external MCP registrations.
 
 The preferred Codex path uses Docker's built-in `codex` template and Jam's native
 app-server stdio connection. Add a custom Codex kit here only when a concrete,
@@ -89,6 +95,13 @@ Validate the standalone Band self-onboarding mixin with:
 
 ```sh
 tests/band-mixin.test.sh
+```
+
+Validate the empty MCP sentinel with:
+
+```sh
+cd mcp-servers/empty-sentinel/server
+go test ./...
 ```
 
 This freezes the normalized proxy-managed credential injection, exact reviewed
