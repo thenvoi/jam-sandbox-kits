@@ -58,7 +58,8 @@ assert inject == {
     ("raw.githubusercontent.com", "Authorization", "Bearer %s", None),
     ("github.com", "Authorization", "Basic %s", "x-access-token"),
 }
-allowed = set(artifact["caps"]["network"]["allow"])
+assert not artifact.get("caps"), "Docker Sandbox v0.39 removed the pre-GA caps field"
+allowed = set(artifact["permissions"]["network"]["allow"])
 assert {
     "app.band.ai:443",
     "auth.band.ai:443",
