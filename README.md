@@ -131,16 +131,17 @@ default `kit.allowedSources`. Jam pins the digest, never the mutable version tag
 | `jam-managed-workspace-v1` bounded WebSocket bridge | `650e47777f77407f9851bb6ae74a16c272e4db69` | `docker.io/vladthenvoi/jam-managed-workspace:1.0.11` | `docker.io/vladthenvoi/jam-managed-workspace@sha256:0cafdc8427ced357244f3e1c38ec56df65cde02b617e408bfc7b07a6b1d3ef60` |
 | `jam-managed-workspace-v1` runtime-host trust boundaries | `711b5614791e6bc56cf9486359673d427ff8bdf6` | `docker.io/vladthenvoi/jam-managed-workspace:1.0.12` | `docker.io/vladthenvoi/jam-managed-workspace@sha256:78e2557fd60f8da8ed80adba067525fd663576d53a84394c547070de9b452261` |
 | `jam-managed-workspace-v1` host-owned Band custody boundary | `9692e77ea63207fef092f4d5b699dff3c4577f93` | `docker.io/vladthenvoi/jam-managed-workspace:1.0.13` | `docker.io/vladthenvoi/jam-managed-workspace@sha256:caa53c556adfb0f48f9658de49d1aa3c2221b9c086de9c60a46df544713600e4` |
+| `jam-managed-workspace-v1` Docker v0.39 permissions schema | `a9f540e957389e834ea4c6fed11bd6ecd03a1170` | `docker.io/vladthenvoi/jam-managed-workspace:1.0.14` | `docker.io/vladthenvoi/jam-managed-workspace@sha256:1555675d5b4697cd595814e083f8c21e0680463553f370703f60eef9ca141e00` |
 
 Machine-readable release records are under [`releases/`](./releases/). The Band
 mixin record is [`band-mixin-1.0.0.json`](./releases/band-mixin-1.0.0.json), and
 the latest managed-workspace record is
-[`jam-managed-workspace-1.0.13.json`](./releases/jam-managed-workspace-1.0.13.json).
+[`jam-managed-workspace-1.0.14.json`](./releases/jam-managed-workspace-1.0.14.json).
 Verify the exact artifacts with:
 
 ```sh
 sbx kit inspect 'docker.io/vladthenvoi/band-mixin@sha256:79f9ba8f6a83d560f20f82ed7d86604f8c5400c3b9c12386e3df1a015d65d8df' --json
-sbx kit inspect 'docker.io/vladthenvoi/jam-managed-workspace@sha256:caa53c556adfb0f48f9658de49d1aa3c2221b9c086de9c60a46df544713600e4' --json
+sbx kit inspect 'docker.io/vladthenvoi/jam-managed-workspace@sha256:1555675d5b4697cd595814e083f8c21e0680463553f370703f60eef9ca141e00' --json
 ```
 
 To use the standalone Band mixin, store the bootstrap key under the kit's
