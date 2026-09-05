@@ -4,7 +4,7 @@ set -eu
 repo_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 kit="$repo_root/mixins/jam-managed-workspace"
 skill="$kit/files/home/.agents/skills/jam-managed-workspace/SKILL.md"
-release="$repo_root/releases/jam-managed-workspace-1.0.13.json"
+release="$repo_root/releases/jam-managed-workspace-1.0.14.json"
 
 fail() {
   printf 'managed-workspace-skill: %s\n' "$1" >&2
@@ -26,7 +26,7 @@ jq -e '
   .schemaVersion == 1 and
   .name == "jam-managed-workspace" and
   .contract == "jam-managed-workspace-v1" and
-  .ociTag == "docker.io/vladthenvoi/jam-managed-workspace:1.0.13" and
+  .ociTag == "docker.io/vladthenvoi/jam-managed-workspace:1.0.14" and
   (.ociDigest | test("^docker.io/vladthenvoi/jam-managed-workspace@sha256:[0-9a-f]{64}$"))
 ' "$release" >/dev/null || fail "invalid immutable release manifest"
 
@@ -37,7 +37,11 @@ inspection=$(sbx kit inspect "$kit" --json)
 python3 -c '
 import json, sys
 artifact = json.load(sys.stdin)
-manifest = artifact["manifest"]
+# Docker v0.39 emits normalized manifest fields at the top level; older
+# inspectors wrapped only those fields under `manifest`. Keep the contract
+# assertion compatible with both output envelopes while freezing the same
+# semantic kit.
+manifest = artifact.get("manifest", artifact)
 assert manifest["schemaVersion"] == "2"
 assert manifest["kind"] == "mixin"
 assert manifest["name"] == "jam-managed-workspace"
@@ -58,7 +62,8 @@ assert inject == {
     ("raw.githubusercontent.com", "Authorization", "Bearer %s", None),
     ("github.com", "Authorization", "Basic %s", "x-access-token"),
 }
-allowed = set(artifact["caps"]["network"]["allow"])
+assert not artifact.get("caps"), "Docker Sandbox v0.39 removed the pre-GA caps field"
+allowed = set(artifact["permissions"]["network"]["allow"])
 assert {
     "app.band.ai:443",
     "auth.band.ai:443",

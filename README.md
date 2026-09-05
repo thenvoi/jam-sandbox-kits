@@ -9,6 +9,7 @@ Docker Sandbox kits, mixins, and verified runtime recipes used with
 |---|---|---|
 | [`mixins/band`](./mixins/band/) | Docker Sandbox `mixin` | Adds Band network policy, proxy-managed bootstrap credentials, and deterministic self-onboarding context to an existing coding-agent sandbox. |
 | [`mixins/jam-managed-workspace`](./mixins/jam-managed-workspace/) | Docker Sandbox `mixin` | Installs the native `jam-managed-workspace-v1` Codex skill and the guest half of Jam's authenticated local-platform bridge, requests the reviewed remote Developer destinations, and adds a host-proxied GitHub credential contract for Jam-owned zero-to-many-repository workspaces. |
+| [`mcp-servers/empty-sentinel`](./mcp-servers/empty-sentinel/) | Docker MCP server | Exposes one inert status tool and gives Jam an explicit fail-closed static MCP set when an agent selects no external services. |
 | [`recipes/copilot-runtime.md`](./recipes/copilot-runtime.md) | Verified recipe | Runs Jam's owned Copilot SDK runtime through Docker's built-in `copilot` template; a custom image is unnecessary. |
 
 ## Ownership boundary
@@ -16,6 +17,11 @@ Docker Sandbox kits, mixins, and verified runtime recipes used with
 This repository owns assets for Jam and interactive coding-harness sandboxes.
 Deployable Python and TypeScript SDK-agent images stay in their respective SDK
 repositories. Jam core implementation stays in `thenvoi/tjam`.
+
+The empty sentinel exists because Docker treats an omitted static MCP set as dynamic discovery.
+Docker v0.39 rejects a static backend with zero tools, so the server declares one inert status
+tool and no prompts, resources, secrets, mounts, or network destinations. Jam selects it only when
+the user selects no external MCP registrations.
 
 The preferred Codex path uses Docker's built-in `codex` template and Jam's native
 app-server stdio connection. Add a custom Codex kit here only when a concrete,
@@ -91,6 +97,13 @@ Validate the standalone Band self-onboarding mixin with:
 tests/band-mixin.test.sh
 ```
 
+Validate the empty MCP sentinel with:
+
+```sh
+cd mcp-servers/empty-sentinel/server
+go test ./...
+```
+
 This freezes the normalized proxy-managed credential injection, exact reviewed
 helper source and checksum, network allowlist, T1 custody disclosure, and the
 absence of a custom sandbox image or entrypoint.
@@ -118,16 +131,17 @@ default `kit.allowedSources`. Jam pins the digest, never the mutable version tag
 | `jam-managed-workspace-v1` bounded WebSocket bridge | `650e47777f77407f9851bb6ae74a16c272e4db69` | `docker.io/vladthenvoi/jam-managed-workspace:1.0.11` | `docker.io/vladthenvoi/jam-managed-workspace@sha256:0cafdc8427ced357244f3e1c38ec56df65cde02b617e408bfc7b07a6b1d3ef60` |
 | `jam-managed-workspace-v1` runtime-host trust boundaries | `711b5614791e6bc56cf9486359673d427ff8bdf6` | `docker.io/vladthenvoi/jam-managed-workspace:1.0.12` | `docker.io/vladthenvoi/jam-managed-workspace@sha256:78e2557fd60f8da8ed80adba067525fd663576d53a84394c547070de9b452261` |
 | `jam-managed-workspace-v1` host-owned Band custody boundary | `9692e77ea63207fef092f4d5b699dff3c4577f93` | `docker.io/vladthenvoi/jam-managed-workspace:1.0.13` | `docker.io/vladthenvoi/jam-managed-workspace@sha256:caa53c556adfb0f48f9658de49d1aa3c2221b9c086de9c60a46df544713600e4` |
+| `jam-managed-workspace-v1` Docker v0.39 permissions schema | `a9f540e957389e834ea4c6fed11bd6ecd03a1170` | `docker.io/vladthenvoi/jam-managed-workspace:1.0.14` | `docker.io/vladthenvoi/jam-managed-workspace@sha256:1555675d5b4697cd595814e083f8c21e0680463553f370703f60eef9ca141e00` |
 
 Machine-readable release records are under [`releases/`](./releases/). The Band
 mixin record is [`band-mixin-1.0.0.json`](./releases/band-mixin-1.0.0.json), and
 the latest managed-workspace record is
-[`jam-managed-workspace-1.0.13.json`](./releases/jam-managed-workspace-1.0.13.json).
+[`jam-managed-workspace-1.0.14.json`](./releases/jam-managed-workspace-1.0.14.json).
 Verify the exact artifacts with:
 
 ```sh
 sbx kit inspect 'docker.io/vladthenvoi/band-mixin@sha256:79f9ba8f6a83d560f20f82ed7d86604f8c5400c3b9c12386e3df1a015d65d8df' --json
-sbx kit inspect 'docker.io/vladthenvoi/jam-managed-workspace@sha256:caa53c556adfb0f48f9658de49d1aa3c2221b9c086de9c60a46df544713600e4' --json
+sbx kit inspect 'docker.io/vladthenvoi/jam-managed-workspace@sha256:1555675d5b4697cd595814e083f8c21e0680463553f370703f60eef9ca141e00' --json
 ```
 
 To use the standalone Band mixin, store the bootstrap key under the kit's

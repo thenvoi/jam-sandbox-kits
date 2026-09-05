@@ -33,7 +33,7 @@ credentials:
           format: "Basic %s"
           username: x-access-token
 
-caps:
+permissions:
   network:
     allow:
       # Developer-profile runtime services. Docker organization governance is
